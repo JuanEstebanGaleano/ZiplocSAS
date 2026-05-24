@@ -110,12 +110,12 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     private Map<String, Usuario> crearUsuarios(LocalDateTime ahora) {
         Map<String, Usuario> usuarios = new LinkedHashMap<>();
-        usuarios.put("usr-ana", usuario("usr-ana", "Ana Torres", "ana.torres@melowallet.test", "3001112233", NivelUsuario.PLATINO, 6840, ahora.minusDays(210)));
-        usuarios.put("usr-carlos", usuario("usr-carlos", "Carlos Rios", "carlos.rios@melowallet.test", "3002223344", NivelUsuario.ORO, 2460, ahora.minusDays(170)));
-        usuarios.put("usr-valeria", usuario("usr-valeria", "Valeria Gomez", "valeria.gomez@melowallet.test", "3003334455", NivelUsuario.ORO, 3890, ahora.minusDays(132)));
-        usuarios.put("usr-mateo", usuario("usr-mateo", "Mateo Duarte", "mateo.duarte@melowallet.test", "3004445566", NivelUsuario.PLATA, 920, ahora.minusDays(96)));
-        usuarios.put("usr-sofia", usuario("usr-sofia", "Sofia Marin", "sofia.marin@melowallet.test", "3005556677", NivelUsuario.PLATA, 720, ahora.minusDays(58)));
-        usuarios.put("usr-nicolas", usuario("usr-nicolas", "Nicolas Pardo", "nicolas.pardo@melowallet.test", "3006667788", NivelUsuario.BRONCE, 280, ahora.minusDays(24)));
+        usuarios.put("usr-laura", usuario("usr-laura", "Laura Mendoza", "laura.mendoza@novawallet.test", "3114567821", NivelUsuario.PLATINO, 7420, ahora.minusDays(240)));
+        usuarios.put("usr-andres", usuario("usr-andres", "Andres Velasco", "andres.velasco@novawallet.test", "3125678932", NivelUsuario.ORO, 2980, ahora.minusDays(180)));
+        usuarios.put("usr-camila", usuario("usr-camila", "Camila Herrera", "camila.herrera@novawallet.test", "3136789043", NivelUsuario.ORO, 4150, ahora.minusDays(145)));
+        usuarios.put("usr-julian", usuario("usr-julian", "Julian Castro", "julian.castro@novawallet.test", "3147890154", NivelUsuario.PLATA, 1100, ahora.minusDays(100)));
+        usuarios.put("usr-paula", usuario("usr-paula", "Paula Ramirez", "paula.ramirez@novawallet.test", "3158901265", NivelUsuario.PLATA, 860, ahora.minusDays(65)));
+        usuarios.put("usr-diego", usuario("usr-diego", "Diego Salazar", "diego.salazar@novawallet.test", "3169012376", NivelUsuario.BRONCE, 340, ahora.minusDays(35)));
         return usuarios;
     }
 
@@ -135,16 +135,23 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     private Map<String, Billetera> crearBilleteras() {
         Map<String, Billetera> billeteras = new LinkedHashMap<>();
-        billeteras.put("wal-ana-principal", billetera("wal-ana-principal", "Principal Ana", TipoBilletera.CORRIENTE, 8_750_000, EstadoBilletera.ACTIVA, "usr-ana"));
-        billeteras.put("wal-ana-ahorro", billetera("wal-ana-ahorro", "Ahorro viaje Ana", TipoBilletera.AHORROS, 3_280_000, EstadoBilletera.ACTIVA, "usr-ana"));
-        billeteras.put("wal-carlos-nomina", billetera("wal-carlos-nomina", "Nomina Carlos", TipoBilletera.CORRIENTE, 2_430_000, EstadoBilletera.ACTIVA, "usr-carlos"));
-        billeteras.put("wal-carlos-transporte", billetera("wal-carlos-transporte", "Transporte Carlos", TipoBilletera.TRANSPORTE, 18_500, EstadoBilletera.ACTIVA, "usr-carlos"));
-        billeteras.put("wal-valeria-negocio", billetera("wal-valeria-negocio", "Negocio Valeria", TipoBilletera.INVERSION, 6_140_000, EstadoBilletera.ACTIVA, "usr-valeria"));
-        billeteras.put("wal-valeria-impuestos", billetera("wal-valeria-impuestos", "Impuestos Valeria", TipoBilletera.AHORRO, 1_980_000, EstadoBilletera.ACTIVA, "usr-valeria"));
-        billeteras.put("wal-mateo-campus", billetera("wal-mateo-campus", "Campus Mateo", TipoBilletera.GASTOS_DIARIOS, 640_000, EstadoBilletera.ACTIVA, "usr-mateo"));
-        billeteras.put("wal-sofia-hogar", billetera("wal-sofia-hogar", "Hogar Sofia", TipoBilletera.COMPRAS, 1_120_000, EstadoBilletera.ACTIVA, "usr-sofia"));
-        billeteras.put("wal-sofia-inversion", billetera("wal-sofia-inversion", "Inversion Sofia", TipoBilletera.INVERSION, 4_450_000, EstadoBilletera.ACTIVA, "usr-sofia"));
-        billeteras.put("wal-nicolas-viajes", billetera("wal-nicolas-viajes", "Viajes Nicolas", TipoBilletera.AHORROS, 530_000, EstadoBilletera.ACTIVA, "usr-nicolas"));
+
+        billeteras.put("wal-laura-main", billetera("wal-laura-main", "Principal Laura", TipoBilletera.CORRIENTE, 9_450_000, EstadoBilletera.ACTIVA, "usr-laura"));
+        billeteras.put("wal-laura-save", billetera("wal-laura-save", "Reserva Laura", TipoBilletera.AHORROS, 4_120_000, EstadoBilletera.ACTIVA, "usr-laura"));
+
+        billeteras.put("wal-andres-pay", billetera("wal-andres-pay", "Nomina Andres", TipoBilletera.CORRIENTE, 2_980_000, EstadoBilletera.ACTIVA, "usr-andres"));
+        billeteras.put("wal-andres-move", billetera("wal-andres-move", "Movilidad Andres", TipoBilletera.TRANSPORTE, 32_000, EstadoBilletera.ACTIVA, "usr-andres"));
+
+        billeteras.put("wal-camila-business", billetera("wal-camila-business", "Empresa Camila", TipoBilletera.INVERSION, 7_320_000, EstadoBilletera.ACTIVA, "usr-camila"));
+        billeteras.put("wal-camila-tax", billetera("wal-camila-tax", "Tributos Camila", TipoBilletera.AHORRO, 2_210_000, EstadoBilletera.ACTIVA, "usr-camila"));
+
+        billeteras.put("wal-julian-campus", billetera("wal-julian-campus", "Campus Julian", TipoBilletera.GASTOS_DIARIOS, 710_000, EstadoBilletera.ACTIVA, "usr-julian"));
+
+        billeteras.put("wal-paula-home", billetera("wal-paula-home", "Hogar Paula", TipoBilletera.COMPRAS, 1_340_000, EstadoBilletera.ACTIVA, "usr-paula"));
+        billeteras.put("wal-paula-invest", billetera("wal-paula-invest", "Inversion Paula", TipoBilletera.INVERSION, 5_180_000, EstadoBilletera.ACTIVA, "usr-paula"));
+
+        billeteras.put("wal-diego-trip", billetera("wal-diego-trip", "Aventuras Diego", TipoBilletera.AHORROS, 690_000, EstadoBilletera.ACTIVA, "usr-diego"));
+
         return billeteras;
     }
 
@@ -162,24 +169,24 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     private List<Transaccion> crearTransacciones(LocalDateTime ahora) {
         return List.of(
-                transaccion("tx-001", ahora.minusDays(45), TipoTransaccion.RECARGA, 1_800_000, null, "wal-ana-principal", EstadoTransaccion.COMPLETADA, 18_000, NivelRiesgo.BAJO),
-                transaccion("tx-002", ahora.minusDays(43), TipoTransaccion.RECARGA, 1_200_000, null, "wal-carlos-nomina", EstadoTransaccion.COMPLETADA, 12_000, NivelRiesgo.BAJO),
-                transaccion("tx-003", ahora.minusDays(40), TipoTransaccion.TRANSFERENCIA, 320_000, "wal-ana-principal", "wal-mateo-campus", EstadoTransaccion.COMPLETADA, 9_600, NivelRiesgo.BAJO),
-                transaccion("tx-004", ahora.minusDays(38), TipoTransaccion.TRANSFERENCIA, 780_000, "wal-valeria-negocio", "wal-sofia-inversion", EstadoTransaccion.COMPLETADA, 23_400, NivelRiesgo.MEDIO),
-                transaccion("tx-005", ahora.minusDays(35), TipoTransaccion.RETIRO, 220_000, "wal-carlos-nomina", null, EstadoTransaccion.COMPLETADA, 4_400, NivelRiesgo.BAJO),
-                transaccion("tx-006", ahora.minusDays(32), TipoTransaccion.PAGO_PROGRAMADO, 460_000, "wal-sofia-hogar", "wal-valeria-impuestos", EstadoTransaccion.COMPLETADA, 13_810, NivelRiesgo.BAJO),
-                transaccion("tx-007", ahora.minusDays(30), TipoTransaccion.TRANSFERENCIA, 150_000, "wal-mateo-campus", "wal-carlos-transporte", EstadoTransaccion.COMPLETADA, 4_500, NivelRiesgo.BAJO),
-                transaccion("tx-008", ahora.minusDays(27), TipoTransaccion.TRANSFERENCIA, 1_250_000, "wal-ana-principal", "wal-valeria-negocio", EstadoTransaccion.COMPLETADA, 37_500, NivelRiesgo.ALTO),
-                transaccion("tx-009", ahora.minusDays(24), TipoTransaccion.RECARGA, 900_000, null, "wal-nicolas-viajes", EstadoTransaccion.COMPLETADA, 9_000, NivelRiesgo.BAJO),
-                transaccion("tx-010", ahora.minusDays(22), TipoTransaccion.TRANSFERENCIA, 95_000, "wal-nicolas-viajes", "wal-sofia-hogar", EstadoTransaccion.COMPLETADA, 2_850, NivelRiesgo.BAJO),
-                transaccion("tx-011", ahora.minusDays(20), TipoTransaccion.PAGO_PROGRAMADO, 310_000, "wal-valeria-impuestos", "wal-carlos-nomina", EstadoTransaccion.COMPLETADA, 9_310, NivelRiesgo.BAJO),
-                transaccion("tx-012", ahora.minusDays(18), TipoTransaccion.TRANSFERENCIA, 2_100_000, "wal-valeria-negocio", "wal-ana-ahorro", EstadoTransaccion.COMPLETADA, 63_000, NivelRiesgo.ALTO),
-                transaccion("tx-013", ahora.minusDays(14), TipoTransaccion.RETIRO, 120_000, "wal-mateo-campus", null, EstadoTransaccion.REVERTIDA, 2_400, NivelRiesgo.BAJO),
-                transaccion("tx-014", ahora.minusDays(12), TipoTransaccion.TRANSFERENCIA, 75_000, "wal-sofia-hogar", "wal-carlos-transporte", EstadoTransaccion.FALLIDA, 0, NivelRiesgo.BAJO),
-                transaccion("tx-015", ahora.minusDays(9), TipoTransaccion.TRANSFERENCIA, 420_000, "wal-carlos-nomina", "wal-nicolas-viajes", EstadoTransaccion.COMPLETADA, 12_600, NivelRiesgo.BAJO),
-                transaccion("tx-016", ahora.minusDays(7), TipoTransaccion.PAGO_PROGRAMADO, 680_000, "wal-ana-ahorro", "wal-sofia-inversion", EstadoTransaccion.COMPLETADA, 20_410, NivelRiesgo.MEDIO),
-                transaccion("tx-017", ahora.minusDays(4), TipoTransaccion.TRANSFERENCIA, 1_450_000, "wal-valeria-negocio", "wal-sofia-inversion", EstadoTransaccion.COMPLETADA, 43_500, NivelRiesgo.ALTO),
-                transaccion("tx-018", ahora.minusDays(2), TipoTransaccion.TRANSFERENCIA, 5_200_000, "wal-ana-principal", "wal-nicolas-viajes", EstadoTransaccion.COMPLETADA, 156_000, NivelRiesgo.CRITICO)
+                transaccion("tx-101", ahora.minusDays(48), TipoTransaccion.RECARGA, 2_100_000, null, "wal-laura-main", EstadoTransaccion.COMPLETADA, 21_000, NivelRiesgo.BAJO),
+                transaccion("tx-102", ahora.minusDays(45), TipoTransaccion.RECARGA, 1_450_000, null, "wal-andres-pay", EstadoTransaccion.COMPLETADA, 14_500, NivelRiesgo.BAJO),
+                transaccion("tx-103", ahora.minusDays(41), TipoTransaccion.TRANSFERENCIA, 410_000, "wal-laura-main", "wal-julian-campus", EstadoTransaccion.COMPLETADA, 12_300, NivelRiesgo.BAJO),
+                transaccion("tx-104", ahora.minusDays(39), TipoTransaccion.TRANSFERENCIA, 920_000, "wal-camila-business", "wal-paula-invest", EstadoTransaccion.COMPLETADA, 27_600, NivelRiesgo.MEDIO),
+                transaccion("tx-105", ahora.minusDays(34), TipoTransaccion.RETIRO, 260_000, "wal-andres-pay", null, EstadoTransaccion.COMPLETADA, 5_200, NivelRiesgo.BAJO),
+                transaccion("tx-106", ahora.minusDays(31), TipoTransaccion.PAGO_PROGRAMADO, 530_000, "wal-paula-home", "wal-camila-tax", EstadoTransaccion.COMPLETADA, 15_900, NivelRiesgo.BAJO),
+                transaccion("tx-107", ahora.minusDays(29), TipoTransaccion.TRANSFERENCIA, 180_000, "wal-julian-campus", "wal-andres-move", EstadoTransaccion.COMPLETADA, 5_400, NivelRiesgo.BAJO),
+                transaccion("tx-108", ahora.minusDays(26), TipoTransaccion.TRANSFERENCIA, 1_480_000, "wal-laura-main", "wal-camila-business", EstadoTransaccion.COMPLETADA, 44_400, NivelRiesgo.ALTO),
+                transaccion("tx-109", ahora.minusDays(23), TipoTransaccion.RECARGA, 1_050_000, null, "wal-diego-trip", EstadoTransaccion.COMPLETADA, 10_500, NivelRiesgo.BAJO),
+                transaccion("tx-110", ahora.minusDays(20), TipoTransaccion.TRANSFERENCIA, 125_000, "wal-diego-trip", "wal-paula-home", EstadoTransaccion.COMPLETADA, 3_750, NivelRiesgo.BAJO),
+                transaccion("tx-111", ahora.minusDays(18), TipoTransaccion.PAGO_PROGRAMADO, 360_000, "wal-camila-tax", "wal-andres-pay", EstadoTransaccion.COMPLETADA, 10_800, NivelRiesgo.BAJO),
+                transaccion("tx-112", ahora.minusDays(16), TipoTransaccion.TRANSFERENCIA, 2_450_000, "wal-camila-business", "wal-laura-save", EstadoTransaccion.COMPLETADA, 73_500, NivelRiesgo.ALTO),
+                transaccion("tx-113", ahora.minusDays(13), TipoTransaccion.RETIRO, 150_000, "wal-julian-campus", null, EstadoTransaccion.REVERTIDA, 3_000, NivelRiesgo.BAJO),
+                transaccion("tx-114", ahora.minusDays(10), TipoTransaccion.TRANSFERENCIA, 88_000, "wal-paula-home", "wal-andres-move", EstadoTransaccion.FALLIDA, 0, NivelRiesgo.BAJO),
+                transaccion("tx-115", ahora.minusDays(8), TipoTransaccion.TRANSFERENCIA, 510_000, "wal-andres-pay", "wal-diego-trip", EstadoTransaccion.COMPLETADA, 15_300, NivelRiesgo.BAJO),
+                transaccion("tx-116", ahora.minusDays(6), TipoTransaccion.PAGO_PROGRAMADO, 740_000, "wal-laura-save", "wal-paula-invest", EstadoTransaccion.COMPLETADA, 22_200, NivelRiesgo.MEDIO),
+                transaccion("tx-117", ahora.minusDays(3), TipoTransaccion.TRANSFERENCIA, 1_780_000, "wal-camila-business", "wal-paula-invest", EstadoTransaccion.COMPLETADA, 53_400, NivelRiesgo.ALTO),
+                transaccion("tx-118", ahora.minusDays(1), TipoTransaccion.TRANSFERENCIA, 5_850_000, "wal-laura-main", "wal-diego-trip", EstadoTransaccion.COMPLETADA, 175_500, NivelRiesgo.CRITICO)
         );
     }
 
@@ -217,16 +224,16 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     private List<Alerta> crearAlertas(LocalDateTime ahora) {
         return List.of(
-                alerta("alt-001", "usr-ana", TipoAlerta.BENEFICIO_DISPONIBLE, "Tienes analitica premium disponible por tu nivel PLATINO", ahora.minusDays(8), false),
-                alerta("alt-002", "usr-ana", TipoAlerta.ACCESO_INUSUAL, "Transferencia critica enviada a Viajes Nicolas", ahora.minusDays(2), false),
-                alerta("alt-003", "usr-carlos", TipoAlerta.SALDO_BAJO, "Saldo bajo en billetera Transporte Carlos", ahora.minusDays(1), false),
-                alerta("alt-004", "usr-carlos", TipoAlerta.TRANSACCION_COMPLETADA, "Transferencia recibida desde Valeria", ahora.minusDays(20), true),
-                alerta("alt-005", "usr-valeria", TipoAlerta.ACCESO_INUSUAL, "Movimiento alto detectado en Negocio Valeria", ahora.minusDays(4), false),
-                alerta("alt-006", "usr-mateo", TipoAlerta.TRANSACCION_COMPLETADA, "Recibiste apoyo para gastos de campus", ahora.minusDays(40), true),
-                alerta("alt-007", "usr-sofia", TipoAlerta.TRANSACCION_FALLIDA, "Transferencia de Hogar Sofia rechazada por validacion", ahora.minusDays(12), false),
-                alerta("alt-008", "usr-sofia", TipoAlerta.BENEFICIO_DISPONIBLE, "Puedes activar puntos dobles por un dia", ahora.minusDays(6), false),
-                alerta("alt-009", "usr-nicolas", TipoAlerta.TRANSACCION_COMPLETADA, "Recarga y transferencias listas para tu viaje", ahora.minusDays(2), true),
-                alerta("alt-010", "usr-valeria", TipoAlerta.LIMITE_EXCEDIDO, "Transferencia cercana al limite operativo diario", ahora.minusDays(4), false)
+                alerta("alt-101", "usr-laura", TipoAlerta.BENEFICIO_DISPONIBLE, "Acceso premium habilitado por tu nivel PLATINO", ahora.minusDays(9), false),
+                alerta("alt-102", "usr-laura", TipoAlerta.ACCESO_INUSUAL, "Transferencia critica enviada a Aventuras Diego", ahora.minusDays(1), false),
+                alerta("alt-103", "usr-andres", TipoAlerta.SALDO_BAJO, "Saldo reducido en billetera Movilidad Andres", ahora.minusDays(2), false),
+                alerta("alt-104", "usr-andres", TipoAlerta.TRANSACCION_COMPLETADA, "Transferencia recibida desde Camila", ahora.minusDays(18), true),
+                alerta("alt-105", "usr-camila", TipoAlerta.ACCESO_INUSUAL, "Movimiento financiero elevado detectado en Empresa Camila", ahora.minusDays(5), false),
+                alerta("alt-106", "usr-julian", TipoAlerta.TRANSACCION_COMPLETADA, "Recibiste apoyo economico para gastos universitarios", ahora.minusDays(38), true),
+                alerta("alt-107", "usr-paula", TipoAlerta.TRANSACCION_FALLIDA, "Transferencia desde Hogar Paula rechazada por validacion", ahora.minusDays(11), false),
+                alerta("alt-108", "usr-paula", TipoAlerta.BENEFICIO_DISPONIBLE, "Tienes disponible una promocion de puntos dobles", ahora.minusDays(7), false),
+                alerta("alt-109", "usr-diego", TipoAlerta.TRANSACCION_COMPLETADA, "Tus movimientos y recargas fueron procesados correctamente", ahora.minusDays(3), true),
+                alerta("alt-110", "usr-camila", TipoAlerta.LIMITE_EXCEDIDO, "Operacion cercana al limite diario permitido", ahora.minusDays(4), false)
         );
     }
 
@@ -243,10 +250,10 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     private List<OperacionProgramada> crearOperacionesProgramadas(LocalDateTime ahora) {
         return List.of(
-                operacion("op-001", ahora.plusDays(1).withHour(9), TipoTransaccion.PAGO_PROGRAMADO, 185_000, "wal-carlos-nomina", "wal-carlos-transporte", false, 1),
-                operacion("op-002", ahora.plusDays(3).withHour(7), TipoTransaccion.PAGO_PROGRAMADO, 520_000, "wal-sofia-hogar", "wal-valeria-impuestos", false, 2),
-                operacion("op-003", ahora.plusDays(5).withHour(18), TipoTransaccion.TRANSFERENCIA, 250_000, "wal-ana-ahorro", "wal-mateo-campus", false, 3),
-                operacion("op-004", ahora.minusDays(6), TipoTransaccion.PAGO_PROGRAMADO, 680_000, "wal-ana-ahorro", "wal-sofia-inversion", true, 1)
+                operacion("op-101", ahora.plusDays(1).withHour(10), TipoTransaccion.PAGO_PROGRAMADO, 210_000, "wal-andres-pay", "wal-andres-move", false, 1),
+                operacion("op-102", ahora.plusDays(4).withHour(8), TipoTransaccion.PAGO_PROGRAMADO, 610_000, "wal-paula-home", "wal-camila-tax", false, 2),
+                operacion("op-103", ahora.plusDays(6).withHour(19), TipoTransaccion.TRANSFERENCIA, 340_000, "wal-laura-save", "wal-julian-campus", false, 3),
+                operacion("op-104", ahora.minusDays(5), TipoTransaccion.PAGO_PROGRAMADO, 740_000, "wal-laura-save", "wal-paula-invest", true, 1)
         );
     }
 
@@ -266,14 +273,14 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     private List<EventoAuditoria> crearEventosAuditoria(LocalDateTime ahora) {
         return List.of(
-                evento("aud-001", null, "usr-ana", TipoEvento.LOGIN, NivelRiesgo.BAJO, "Login exitoso desde navegador principal", ahora.minusDays(10), true),
-                evento("aud-002", "tx-008", "usr-ana", TipoEvento.ALERTA_GENERADA, NivelRiesgo.ALTO, "Transferencia alta hacia Negocio Valeria", ahora.minusDays(27), true),
-                evento("aud-003", "tx-012", "usr-valeria", TipoEvento.ALERTA_GENERADA, NivelRiesgo.ALTO, "Salida alta desde Negocio Valeria", ahora.minusDays(18), false),
-                evento("aud-004", "tx-014", "usr-sofia", TipoEvento.ACCESO_DENEGADO, NivelRiesgo.MEDIO, "Operacion rechazada por regla de validacion", ahora.minusDays(12), false),
-                evento("aud-005", null, "usr-carlos", TipoEvento.CAMBIO_NIVEL, NivelRiesgo.BAJO, "Usuario promovido a nivel ORO", ahora.minusDays(11), true),
-                evento("aud-006", "tx-017", "usr-valeria", TipoEvento.ALERTA_GENERADA, NivelRiesgo.ALTO, "Patron financiero inusual detectado", ahora.minusDays(4), false),
-                evento("aud-007", "tx-018", "usr-ana", TipoEvento.ALERTA_GENERADA, NivelRiesgo.CRITICO, "Transferencia critica requiere revision manual", ahora.minusDays(2), false),
-                evento("aud-008", null, "usr-nicolas", TipoEvento.LOGIN, NivelRiesgo.BAJO, "Login exitoso antes de confirmar viaje", ahora.minusDays(1), true)
+                evento("aud-101", null, "usr-laura", TipoEvento.LOGIN, NivelRiesgo.BAJO, "Inicio de sesion exitoso desde dispositivo principal", ahora.minusDays(11), true),
+                evento("aud-102", "tx-108", "usr-laura", TipoEvento.ALERTA_GENERADA, NivelRiesgo.ALTO, "Transferencia elevada hacia Empresa Camila", ahora.minusDays(26), true),
+                evento("aud-103", "tx-112", "usr-camila", TipoEvento.ALERTA_GENERADA, NivelRiesgo.ALTO, "Movimiento de salida considerable detectado", ahora.minusDays(16), false),
+                evento("aud-104", "tx-114", "usr-paula", TipoEvento.ACCESO_DENEGADO, NivelRiesgo.MEDIO, "Operacion bloqueada por regla automatica de seguridad", ahora.minusDays(10), false),
+                evento("aud-105", null, "usr-andres", TipoEvento.CAMBIO_NIVEL, NivelRiesgo.BAJO, "Usuario ascendido al nivel ORO", ahora.minusDays(9), true),
+                evento("aud-106", "tx-117", "usr-camila", TipoEvento.ALERTA_GENERADA, NivelRiesgo.ALTO, "Patron financiero atipico identificado", ahora.minusDays(3), false),
+                evento("aud-107", "tx-118", "usr-laura", TipoEvento.ALERTA_GENERADA, NivelRiesgo.CRITICO, "Transferencia critica enviada para revision manual", ahora.minusDays(1), false),
+                evento("aud-108", null, "usr-diego", TipoEvento.LOGIN, NivelRiesgo.BAJO, "Inicio de sesion exitoso previo a viaje", ahora.minusDays(1), true)
         );
     }
 
