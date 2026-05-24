@@ -30,7 +30,7 @@ function getPoints(usuario) {
 }
 
 export default function Usuarios() {
-  const { user } = useAuth();
+  const {user} = useAuth();
   const isDemoUser = user?.email === 'demo@ZiplocSAS.local' || user?.demo;
   const usuariosQuery = useUsuarios();
   const topUsuariosQuery = useTopUsuariosPuntos();
@@ -135,12 +135,12 @@ export default function Usuarios() {
   }
 
   function handleFormChange(event) {
-    const { name, value, type, checked } = event.target;
+    const {name, value, type, checked} = event.target;
     setForm((current) => ({
       ...current,
       [name]: type === 'checkbox' ? checked : value,
     }));
-    setFormErrors((current) => ({ ...current, [name]: '' }));
+    setFormErrors((current) => ({...current, [name]: ''}));
   }
 
   async function handleSubmit(event) {
@@ -153,12 +153,12 @@ export default function Usuarios() {
       nombre: form.nombre.trim(),
       email: form.email.trim(),
       telefono: form.telefono.trim(),
-      ...(modalMode === 'create' && form.contrasena ? { contrasena: form.contrasena } : {})
+      ...(modalMode === 'create' && form.contrasena ? {contrasena: form.contrasena} : {})
     };
 
     try {
       if (modalMode === 'edit' && selectedUserId) {
-        await updateMutation.mutateAsync({ id: selectedUserId, payload });
+        await updateMutation.mutateAsync({id: selectedUserId, payload});
       } else {
         await createMutation.mutateAsync(payload);
       }
@@ -182,233 +182,243 @@ export default function Usuarios() {
   const topFive = usuariosTop.slice(0, 5);
 
   return (
-    <section className="flex flex-col gap-6 relative">
-      {error && (
-        <AlertaPanel
-          type="error"
-          title="No se pudo completar la operación"
-          message={error?.message || 'Error inesperado con el módulo de usuarios'}
-        />
-      )}
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-textoPrincipal">Usuarios</h1>
-          <p className="text-sm text-textoSecundario">Gestión completa de usuarios, puntos y niveles.</p>
-        </div>
-        {isDemoUser && (
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-acento text-superficie rounded-md font-medium hover:bg-acentoHover transition-colors"
-          >
-            <Plus size={18} /> Nuevo usuario
-          </button>
+      <section className="flex flex-col gap-6 relative text-[#F5F7FA]">
+        {error && (
+            <AlertaPanel
+                type="error"
+                title="No se pudo completar la operación"
+                message={error?.message || 'Error inesperado con el módulo de usuarios'}
+            />
         )}
-      </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-superficie border border-borde rounded-md shadow-sutil p-6">
-          <div className="flex flex-wrap gap-3 mb-5">
-            <div className="relative flex-1 min-w-[240px]">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-textoSecundario" />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar por nombre, email o teléfono"
-                className="w-full pl-10 pr-4 py-3 bg-transparent border border-borde rounded-md outline-none focus:border-acento"
-              />
-            </div>
-            <select value={nivelFilter} onChange={(event) => setNivelFilter(event.target.value)} className="px-4 py-3 bg-transparent border border-borde rounded-md">
-              <option value="">Todos los niveles</option>
-              <option value="BRONCE">Bronce</option>
-              <option value="PLATA">Plata</option>
-              <option value="ORO">Oro</option>
-              <option value="PLATINO">Platino</option>
-            </select>
-            <select value={estadoFilter} onChange={(event) => setEstadoFilter(event.target.value)} className="px-4 py-3 bg-transparent border border-borde rounded-md">
-              <option value="">Todos los estados</option>
-              <option value="ACTIVO">Activo</option>
-              <option value="INACTIVO">Inactivo</option>
-            </select>
-            <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} className="px-4 py-3 bg-transparent border border-borde rounded-md">
-              <option value={5}>5 por página</option>
-              <option value={10}>10 por página</option>
-              <option value={20}>20 por página</option>
-            </select>
+        <div
+            className="flex flex-wrap items-center justify-between gap-3 bg-[#0E1120] border border-[#23263A] rounded-2xl p-6 shadow-[0_0_30px_rgba(98,70,234,0.15)]">
+          <div>
+            <h1 className="text-3xl font-semibold text-white">Usuarios</h1>
+            <p className="text-sm text-[#9CA3AF] mt-1">
+              Gestión completa de usuarios, puntos y niveles.
+            </p>
           </div>
 
-          {loading ? (
-            <div className="py-10 flex justify-center"><LoadingSpinner /></div>
-          ) : pagedUsuarios.length ? (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] border-collapse">
-                <thead>
-                  <tr className="text-left text-xs uppercase tracking-wider text-textoSecundario border-b border-borde">
-                    <th className="py-3 pr-3">Nombre</th>
-                    <th className="py-3 pr-3">Email</th>
-                    <th className="py-3 pr-3">Teléfono</th>
-                    <th className="py-3 pr-3">Puntos</th>
-                    <th className="py-3 pr-3">Nivel</th>
-                    <th className="py-3 pr-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagedUsuarios.map((usuario) => (
-                    <tr key={usuario.id} className="border-b border-borde hover:bg-fondo transition-colors">
-                      <td className="py-4 pr-3 font-medium text-textoPrincipal">{usuario.nombre}</td>
-                      <td className="py-4 pr-3 text-sm text-textoSecundario">{usuario.email}</td>
-                      <td className="py-4 pr-3 text-sm text-textoSecundario">{usuario.telefono}</td>
-                      <td className="py-4 pr-3 font-semibold">{getPoints(usuario)}</td>
-                      <td className="py-4 pr-3"><NivelBadge nivel={usuario.nivel} puntos={getPoints(usuario)} /></td>
-                      <td className="py-4 pr-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <button type="button" onClick={() => openDetail(usuario)} className="p-2 rounded-md border border-borde hover:border-acento" title="Ver detalle"><Eye size={16} /></button>
-                          <button type="button" onClick={() => openEditModal(usuario)} className="p-2 rounded-md border border-borde hover:border-acento" title="Editar"><Pencil size={16} /></button>
-                          <button type="button" onClick={() => handleDelete(usuario)} disabled={deleteMutation.isPending} className="p-2 rounded-md border border-borde hover:border-error text-error disabled:opacity-50" title="Eliminar"><Trash2 size={16} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="border border-dashed border-borde rounded-md p-8 bg-fondo text-center">
-              <p className="text-sm text-textoSecundario">No hay usuarios que coincidan con los filtros.</p>
-            </div>
+          {isDemoUser && (
+              <button
+                  type="button"
+                  onClick={openCreateModal}
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-[#5B5FEF] bg-gradient-to-r from-[#5B5FEF] to-[#2DD4BF] text-white font-medium hover:opacity-90 transition-all shadow-lg shadow-[#5B5FEF]/20"
+              >
+                <Plus size={18}/>
+                Nuevo usuario
+              </button>
           )}
-
-          <div className="flex items-center justify-between gap-3 mt-5">
-            <div className="text-sm text-textoSecundario">
-              Página {safePage} de {totalPages} · {filteredUsuarios.length} resultados
-            </div>
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={safePage <= 1} className="inline-flex items-center gap-1 px-3 py-2 border border-borde rounded-md disabled:opacity-50">
-                <ChevronLeft size={16} /> Prev
-              </button>
-              <button type="button" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={safePage >= totalPages} className="inline-flex items-center gap-1 px-3 py-2 border border-borde rounded-md disabled:opacity-50">
-                Next <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
         </div>
 
-        <aside className="flex flex-col gap-6">
-          <div className="bg-superficie border border-borde rounded-md shadow-sutil p-6">
-            <h2 className="text-lg font-semibold mb-4 text-textoPrincipal">Top usuarios</h2>
-            {topUsuariosQuery.isLoading ? (
-              <div className="py-6 flex justify-center"><LoadingSpinner /></div>
-            ) : topFive.length ? (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div
+              className="xl:col-span-2 bg-[#0E1120] border border-[#23263A] rounded-2xl shadow-[0_0_35px_rgba(91,95,239,0.08)] p-6">
+
+            <div className="flex flex-wrap gap-3 mb-6">
+              <div className="relative flex-1 min-w-[240px]">
+                <Search
+                    size={18}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7C82A1]"
+                />
+
+                <input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Buscar por nombre, email o teléfono"
+                    className="w-full pl-10 pr-4 py-3 bg-[#121526] border border-[#2B3050] rounded-xl outline-none focus:border-[#5B5FEF] text-white placeholder:text-[#6B7280]"
+                />
+              </div>
+
+              <select
+                  value={nivelFilter}
+                  onChange={(event) => setNivelFilter(event.target.value)}
+                  className="px-4 py-3 bg-[#121526] border border-[#2B3050] rounded-xl text-white"
+              >
+                <option value="">Todos los niveles</option>
+                <option value="BRONCE">Bronce</option>
+                <option value="PLATA">Plata</option>
+                <option value="ORO">Oro</option>
+                <option value="PLATINO">Platino</option>
+              </select>
+
+              <select
+                  value={estadoFilter}
+                  onChange={(event) => setEstadoFilter(event.target.value)}
+                  className="px-4 py-3 bg-[#121526] border border-[#2B3050] rounded-xl text-white"
+              >
+                <option value="">Todos los estados</option>
+                <option value="ACTIVO">Activo</option>
+                <option value="INACTIVO">Inactivo</option>
+              </select>
+
+              <select
+                  value={pageSize}
+                  onChange={(event) => setPageSize(Number(event.target.value))}
+                  className="px-4 py-3 bg-[#121526] border border-[#2B3050] rounded-xl text-white"
+              >
+                <option value={5}>5 por página</option>
+                <option value={10}>10 por página</option>
+                <option value={20}>20 por página</option>
+              </select>
+            </div>
+
+            {loading ? (
+                <div className="py-10 flex justify-center">
+                  <LoadingSpinner/>
+                </div>
+            ) : pagedUsuarios.length ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[860px] border-collapse">
+                    <thead>
+                    <tr className="text-left text-xs uppercase tracking-wider text-[#7C82A1] border-b border-[#23263A]">
+                      <th className="py-4 pr-3">Nombre</th>
+                      <th className="py-4 pr-3">Email</th>
+                      <th className="py-4 pr-3">Teléfono</th>
+                      <th className="py-4 pr-3">Puntos</th>
+                      <th className="py-4 pr-3">Nivel</th>
+                      <th className="py-4 pr-3 text-right">Acciones</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    {pagedUsuarios.map((usuario) => (
+                        <tr
+                            key={usuario.id}
+                            className="border-b border-[#1E2235] hover:bg-[#151A2E] transition-all"
+                        >
+                          <td className="py-5 pr-3 font-medium text-white">
+                            {usuario.nombre}
+                          </td>
+
+                          <td className="py-5 pr-3 text-sm text-[#A1A1AA]">
+                            {usuario.email}
+                          </td>
+
+                          <td className="py-5 pr-3 text-sm text-[#A1A1AA]">
+                            {usuario.telefono}
+                          </td>
+
+                          <td className="py-5 pr-3 font-semibold text-[#D1D5DB]">
+                            {getPoints(usuario)}
+                          </td>
+
+                          <td className="py-5 pr-3">
+                            <NivelBadge
+                                nivel={usuario.nivel}
+                                puntos={getPoints(usuario)}
+                            />
+                          </td>
+
+                          <td className="py-5 pr-3">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                  type="button"
+                                  onClick={() => openDetail(usuario)}
+                                  className="p-2 rounded-lg border border-[#2B3050] hover:border-[#5B5FEF] hover:bg-[#1B2140] transition-all"
+                              >
+                                <Eye size={16}/>
+                              </button>
+
+                              <button
+                                  type="button"
+                                  onClick={() => openEditModal(usuario)}
+                                  className="p-2 rounded-lg border border-[#2B3050] hover:border-[#2DD4BF] hover:bg-[#132C2A] transition-all"
+                              >
+                                <Pencil size={16}/>
+                              </button>
+
+                              <button
+                                  type="button"
+                                  onClick={() => handleDelete(usuario)}
+                                  disabled={deleteMutation.isPending}
+                                  className="p-2 rounded-lg border border-[#2B3050] hover:border-[#EF4444] hover:bg-[#2A1515] text-[#F87171] disabled:opacity-50 transition-all"
+                              >
+                                <Trash2 size={16}/>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                  </table>
+                </div>
+            ) : (
+                <div className="border border-dashed border-[#2B3050] rounded-2xl p-10 bg-[#121526] text-center">
+                  <p className="text-sm text-[#9CA3AF]">
+                    No hay usuarios que coincidan con los filtros.
+                  </p>
+                </div>
+            )}
+
+            <div className="flex items-center justify-between gap-3 mt-6">
+              <div className="text-sm text-[#7C82A1]">
+                Página {safePage} de {totalPages} · {filteredUsuarios.length} resultados
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                    type="button"
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    disabled={safePage <= 1}
+                    className="inline-flex items-center gap-1 px-4 py-2 border border-[#2B3050] rounded-xl bg-[#121526] hover:border-[#5B5FEF] disabled:opacity-50"
+                >
+                  <ChevronLeft size={16}/>
+                  Prev
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                    disabled={safePage >= totalPages}
+                    className="inline-flex items-center gap-1 px-4 py-2 border border-[#2B3050] rounded-xl bg-[#121526] hover:border-[#5B5FEF] disabled:opacity-50"
+                >
+                  Next
+                  <ChevronRight size={16}/>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <aside className="flex flex-col gap-6">
+            <div
+                className="bg-[#0E1120] border border-[#23263A] rounded-2xl p-6 shadow-[0_0_35px_rgba(91,95,239,0.08)]">
+              <h2 className="text-xl font-semibold text-white mb-5">
+                Top usuarios
+              </h2>
+
               <div className="flex flex-col gap-3">
                 {topFive.map((usuario) => (
-                  <button key={usuario.id} type="button" onClick={() => openDetail(usuario)} className="text-left p-3 rounded-md border border-borde hover:border-acento transition-colors">
-                    <div className="font-medium text-textoPrincipal">{usuario.nombre}</div>
-                    <div className="text-xs text-textoSecundario">{usuario.email}</div>
-                    <div className="mt-2 flex items-center justify-between text-sm">
-                      <span>{levelLabel(usuario.nivel)}</span>
-                      <strong>{getPoints(usuario)} pts</strong>
-                    </div>
-                  </button>
+                    <button
+                        key={usuario.id}
+                        type="button"
+                        onClick={() => openDetail(usuario)}
+                        className="text-left p-4 rounded-xl border border-[#23263A] bg-[#121526] hover:border-[#5B5FEF] transition-all"
+                    >
+                      <div className="font-medium text-white">
+                        {usuario.nombre}
+                      </div>
+
+                      <div className="text-xs text-[#9CA3AF]">
+                        {usuario.email}
+                      </div>
+
+                      <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="text-[#D1D5DB]">
+                    {levelLabel(usuario.nivel)}
+                  </span>
+
+                        <strong className="text-[#A78BFA]">
+                          {getPoints(usuario)} pts
+                        </strong>
+                      </div>
+                    </button>
                 ))}
               </div>
-            ) : (
-              <p className="text-sm text-textoSecundario">Sin datos de top usuarios.</p>
-            )}
-          </div>
-
-          <div className="bg-superficie border border-borde rounded-md shadow-sutil p-6">
-            <h2 className="text-lg font-semibold mb-4 text-textoPrincipal">Rango por puntos</h2>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <input type="number" value={minPuntos} onChange={(event) => setMinPuntos(event.target.value)} placeholder="Mínimo" className="px-4 py-3 bg-transparent border border-borde rounded-md" />
-              <input type="number" value={maxPuntos} onChange={(event) => setMaxPuntos(event.target.value)} placeholder="Máximo" className="px-4 py-3 bg-transparent border border-borde rounded-md" />
             </div>
-            {rangoUsuariosQuery.isLoading ? (
-              <div className="py-4 flex justify-center"><LoadingSpinner /></div>
-            ) : usuariosRango.length ? (
-              <div className="flex flex-col gap-2 max-h-[280px] overflow-auto">
-                {usuariosRango.map((usuario) => (
-                  <div key={usuario.id} className="p-3 rounded-md border border-borde">
-                    <div className="font-medium">{usuario.nombre}</div>
-                    <div className="text-xs text-textoSecundario">{getPoints(usuario)} puntos · {levelLabel(usuario.nivel)}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-textoSecundario">Ingresa un rango válido para consultar usuarios.</p>
-            )}
-          </div>
-        </aside>
-      </div>
-
-      {modalMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl bg-superficie rounded-lg shadow-2xl border border-borde max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b border-borde">
-              <h3 className="text-lg font-semibold text-textoPrincipal">
-                {modalMode === 'create' && 'Nuevo usuario'}
-                {modalMode === 'edit' && 'Editar usuario'}
-                {modalMode === 'detail' && 'Detalle de usuario'}
-              </h3>
-              <button type="button" onClick={closeModal} className="text-textoSecundario hover:text-textoPrincipal">✕</button>
-            </div>
-
-            {modalMode === 'detail' ? (
-              <div className="p-5">
-                {detailQuery.isLoading ? (
-                  <div className="py-8 flex justify-center"><LoadingSpinner /></div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><span className="text-xs uppercase text-textoSecundario">Nombre</span><p className="font-medium">{detailQuery.data?.usuario?.nombre || detailQuery.data?.nombre}</p></div>
-                    <div><span className="text-xs uppercase text-textoSecundario">Email</span><p className="font-medium">{detailQuery.data?.usuario?.email || detailQuery.data?.email}</p></div>
-                    <div><span className="text-xs uppercase text-textoSecundario">Teléfono</span><p className="font-medium">{detailQuery.data?.usuario?.telefono || detailQuery.data?.telefono}</p></div>
-                    <div><span className="text-xs uppercase text-textoSecundario">Puntos</span><p className="font-medium">{getPoints(detailQuery.data?.usuario || detailQuery.data)}</p></div>
-                    <div><span className="text-xs uppercase text-textoSecundario">Nivel</span><p className="font-medium">{levelLabel(detailQuery.data?.usuario?.nivel || detailQuery.data?.nivel)}</p></div>
-                    <div><span className="text-xs uppercase text-textoSecundario">Estado</span><p className="font-medium">{(detailQuery.data?.usuario?.activo ?? detailQuery.data?.activo) ? 'ACTIVO' : 'INACTIVO'}</p></div>
-                    <div><span className="text-xs uppercase text-textoSecundario">Creado</span><p className="font-medium">{detailQuery.data?.usuario?.creadoAt || detailQuery.data?.creadoAt || '-'}</p></div>
-                    <div><span className="text-xs uppercase text-textoSecundario">Actualizado</span><p className="font-medium">{detailQuery.data?.usuario?.actualizadoAt || detailQuery.data?.actualizadoAt || '-'}</p></div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4" noValidate>
-                <div className="md:col-span-2 flex flex-col gap-2">
-                  <label className="text-sm font-medium text-textoSecundario">Nombre</label>
-                  <input name="nombre" value={form.nombre} onChange={handleFormChange} className="px-4 py-3 bg-transparent border border-borde rounded-md outline-none focus:border-acento" />
-                  {formErrors.nombre && <span className="text-xs text-error">{formErrors.nombre}</span>}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-textoSecundario">Email</label>
-                  <input name="email" type="email" value={form.email} onChange={handleFormChange} className="px-4 py-3 bg-transparent border border-borde rounded-md outline-none focus:border-acento" />
-                  {formErrors.email && <span className="text-xs text-error">{formErrors.email}</span>}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-textoSecundario">Teléfono</label>
-                  <input name="telefono" value={form.telefono} onChange={handleFormChange} className="px-4 py-3 bg-transparent border border-borde rounded-md outline-none focus:border-acento" />
-                  {formErrors.telefono && <span className="text-xs text-error">{formErrors.telefono}</span>}
-                </div>
-                {modalMode === 'create' && (
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium text-textoSecundario">Contraseña</label>
-                    <input name="contrasena" type="password" value={form.contrasena} onChange={handleFormChange} className="px-4 py-3 bg-transparent border border-borde rounded-md outline-none focus:border-acento" />
-                    {formErrors.contrasena && <span className="text-xs text-error">{formErrors.contrasena}</span>}
-                  </div>
-                )}
-                <div className="md:col-span-2 flex items-center gap-2">
-                  <input id="activo" name="activo" type="checkbox" checked={form.activo} onChange={handleFormChange} />
-                  <label htmlFor="activo" className="text-sm text-textoSecundario">Usuario activo</label>
-                </div>
-                <div className="md:col-span-2 flex items-center justify-end gap-3 mt-2">
-                  <button type="button" onClick={closeModal} className="px-4 py-2 border border-borde rounded-md">Cancelar</button>
-                  <button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-4 py-2 bg-acento text-superficie rounded-md font-medium disabled:opacity-50">
-                    {modalMode === 'edit' ? (updateMutation.isPending ? 'Guardando...' : 'Guardar cambios') : (createMutation.isPending ? 'Creando...' : 'Crear usuario')}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
+          </aside>
         </div>
-      )}
-    </section>
+      </section>
   );
 }

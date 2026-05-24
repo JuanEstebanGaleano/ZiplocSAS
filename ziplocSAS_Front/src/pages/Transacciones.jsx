@@ -235,98 +235,272 @@ export default function Transacciones({ userId }) {
   const scheduledOps = [];
 
   return (
-    <section className="flex flex-col lg:flex-row gap-6 items-start relative">
-      {error && <div className="absolute top-0 right-0 w-full lg:w-auto z-10"><AlertaPanel type="error" title="Operación no completada" message={error} /></div>}
-      {success && <div className="absolute top-0 right-0 w-full lg:w-auto z-10"><AlertaPanel type="success" title="Operación exitosa" message={success} /></div>}
-      {isLoading ? <div className="w-full flex justify-center py-10"><LoadingSpinner /></div> : (
-        <>
-          <div className="w-full lg:w-[380px] shrink-0">
-            <TransaccionForm form={form} errors={errors} billeteras={wallets} loading={crearTransaccionMutation.isPending} onChange={handleChange} onSubmit={handleSubmit} resultado={success} />
-          </div>
-
-          <div className="flex-1 flex flex-col gap-5 min-w-0">
-            <div className="bg-superficie p-6 rounded-md shadow-sutil border border-borde flex flex-col gap-6">
-              <div className="flex flex-wrap justify-between items-center gap-3">
-                <h2 className="text-lg font-semibold text-textoPrincipal">Historial de transacciones</h2>
-                <span className="text-xs uppercase tracking-wider text-textoSecundario font-medium">Consulta y reversión</span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <SelectCustom label="Billetera" name="walletHistory" value={selectedWalletId} options={wallets.map((wallet) => ({ value: String(wallet.id), label: wallet.nombre }))} placeholder="Selecciona una billetera" onChange={(event) => setSelectedWalletId(event.target.value)} disabled={loadingHistory || !wallets.length} />
-                <SelectCustom label="Tipo" name="filterType" value={filterType} options={transactionTypeOptions} placeholder="Todos" onChange={(event) => setFilterType(event.target.value)} disabled={loadingHistory || !history.length} />
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium text-textoSecundario">Desde</label>
-                    <input type="date" className="w-full p-3 bg-transparent border border-borde rounded-md text-textoPrincipal outline-none transition-all duration-150 focus:border-acento focus:ring-[3px] focus:ring-[#C47A44]/10 disabled:opacity-50" value={filterStart} onChange={(event) => setFilterStart(event.target.value)} />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium text-textoSecundario">Hasta</label>
-                    <input type="date" className="w-full p-3 bg-transparent border border-borde rounded-md text-textoPrincipal outline-none transition-all duration-150 focus:border-acento focus:ring-[3px] focus:ring-[#C47A44]/10 disabled:opacity-50" value={filterEnd} onChange={(event) => setFilterEnd(event.target.value)} />
-                  </div>
-                </div>
-              </div>
-
-              {loadingHistory ? (
-                <div className="py-8 flex justify-center"><LoadingSpinner /></div>
-              ) : filteredHistory.length ? (
-                <div className="flex flex-col mt-4">
-                  <div className="grid grid-cols-5 gap-4 pb-3 mb-2 border-b border-borde text-xs uppercase tracking-wider text-textoSecundario font-semibold">
-                    <div className="col-span-1">Tipo</div>
-                    <div className="col-span-1">Monto</div>
-                    <div className="col-span-1">Estado</div>
-                    <div className="col-span-1">Fecha</div>
-                    <div className="col-span-1 text-right">Acción</div>
-                  </div>
-                    <div className="flex flex-col">
-                      {filteredHistory.map((transaccion) => (
-                        <TransaccionItem key={transaccion.id} transaccion={{...transaccion, tipoLabel: TIPO_LABEL[transaccion.tipo] || transaccion.tipo, estadoLabel: ESTADO_LABEL[transaccion.estado] || transaccion.estado }} onRevert={handleRevert} loading={revertingId === transaccion.id} />
-                      ))}
-                    </div>
-                </div>
-              ) : (
-                <div className="border border-dashed border-borde rounded-md p-5 bg-fondo flex flex-col gap-2 mt-2">
-                  <p className="text-sm text-textoSecundario">No hay transacciones para los filtros seleccionados.</p>
-                  <p className="text-xs text-textoSecundario">Ajusta el rango o el tipo para ver resultados.</p>
-                </div>
-              )}
+      <section className="flex flex-col lg:flex-row gap-6 items-start relative text-[#F5F5F7]">
+        {error && (
+            <div className="absolute top-0 right-0 w-full lg:w-auto z-10">
+              <AlertaPanel
+                  type="error"
+                  title="Operación no completada"
+                  message={error}
+              />
             </div>
+        )}
 
-            <section className="bg-superficie p-6 rounded-md shadow-sutil border border-borde flex flex-col gap-5">
-              <div className="flex flex-wrap justify-between items-center gap-3">
-                <h2 className="text-lg font-semibold text-textoPrincipal">Operaciones programadas</h2>
-                <span className="text-xs uppercase tracking-wider text-textoSecundario font-medium">Calendario</span>
+        {success && (
+            <div className="absolute top-0 right-0 w-full lg:w-auto z-10">
+              <AlertaPanel
+                  type="success"
+                  title="Operación exitosa"
+                  message={success}
+              />
+            </div>
+        )}
+
+        {isLoading ? (
+            <div className="w-full flex justify-center py-10">
+              <LoadingSpinner />
+            </div>
+        ) : (
+            <>
+              <div className="w-full lg:w-[380px] shrink-0">
+                <div className="bg-[#0F1118] border border-[#232633] rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.45)] overflow-hidden">
+                  <div className="h-1 bg-gradient-to-r from-[#6D5DF6] via-[#8B7BFF] to-[#33E1C9]" />
+                  <div className="p-5">
+                    <TransaccionForm
+                        form={form}
+                        errors={errors}
+                        billeteras={wallets}
+                        loading={crearTransaccionMutation.isPending}
+                        onChange={handleChange}
+                        onSubmit={handleSubmit}
+                        resultado={success}
+                    />
+                  </div>
+                </div>
               </div>
 
-              {scheduledOps.length ? (
-                <div className="flex flex-col">
-                  <div className="grid grid-cols-5 gap-4 pb-3 mb-2 border-b border-borde text-xs uppercase tracking-wider text-textoSecundario font-semibold">
-                    <div className="col-span-2">Fecha de ejecucion</div>
-                    <div className="col-span-1">Tipo</div>
-                    <div className="col-span-1">Monto</div>
-                    <div className="col-span-1 text-right">Estado</div>
+              <div className="flex-1 flex flex-col gap-5 min-w-0">
+
+                {/* HISTORIAL */}
+                <div className="bg-[#0F1118] p-6 rounded-3xl border border-[#232633] shadow-[0_0_40px_rgba(0,0,0,0.45)] flex flex-col gap-6">
+
+                  <div className="flex flex-wrap justify-between items-center gap-3">
+                    <div>
+                      <h2 className="text-xl font-semibold text-white">
+                        Historial de transacciones
+                      </h2>
+                      <p className="text-sm text-[#8D91A3] mt-1">
+                        Consulta y reversión
+                      </p>
+                    </div>
+
+                    <span className="text-xs uppercase tracking-[0.2em] text-[#6D5DF6] font-semibold">
+                Wallet Activity
+              </span>
                   </div>
-                  {scheduledOps.map((op) => (
-                    <article key={op.id} className="grid grid-cols-5 gap-4 items-center py-4 border-b border-borde last:border-b-0 hover:bg-fondo transition-colors duration-150 px-2 -mx-2 rounded">
-                      <div className="col-span-2 text-sm text-textoSecundario">{op.executionDate}</div>
-                      <div className="col-span-1 text-sm font-medium text-textoPrincipal">{TIPO_LABEL[op.type] || op.type}</div>
-                      <div className="col-span-1 text-base font-bold text-textoPrincipal">$ {Number(op.amount || 0).toLocaleString('es-CO')}</div>
-                      <div className="col-span-1 text-right text-xs font-semibold text-textoSecundario">{ESTADO_LABEL[op.status] || op.status}</div>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <div className="border border-dashed border-borde rounded-md p-5 bg-fondo">
-                  <p className="text-sm text-textoSecundario">No hay operaciones programadas.</p>
-                </div>
-              )}
-            </section>
 
-            <UsuarioCard usuario={usuario} />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-            <NotificacionesPanel alertas={notificationAlerts} />
-          </div>
-        </>
-      )}
-    </section>
+                    <div className="bg-[#151823] border border-[#262B3B] rounded-2xl p-1">
+                      <SelectCustom
+                          label="Billetera"
+                          name="walletHistory"
+                          value={selectedWalletId}
+                          options={wallets.map((wallet) => ({
+                            value: String(wallet.id),
+                            label: wallet.nombre
+                          }))}
+                          placeholder="Selecciona una billetera"
+                          onChange={(event) =>
+                              setSelectedWalletId(event.target.value)
+                          }
+                          disabled={loadingHistory || !wallets.length}
+                      />
+                    </div>
+
+                    <div className="bg-[#151823] border border-[#262B3B] rounded-2xl p-1">
+                      <SelectCustom
+                          label="Tipo"
+                          name="filterType"
+                          value={filterType}
+                          options={transactionTypeOptions}
+                          placeholder="Todos"
+                          onChange={(event) =>
+                              setFilterType(event.target.value)
+                          }
+                          disabled={loadingHistory || !history.length}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-medium text-[#B3B7C8]">
+                          Desde
+                        </label>
+
+                        <input
+                            type="date"
+                            className="w-full p-3 bg-[#151823] border border-[#262B3B] rounded-2xl text-white outline-none transition-all duration-200 focus:border-[#6D5DF6] focus:ring-4 focus:ring-[#6D5DF6]/10"
+                            value={filterStart}
+                            onChange={(event) =>
+                                setFilterStart(event.target.value)
+                            }
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-medium text-[#B3B7C8]">
+                          Hasta
+                        </label>
+
+                        <input
+                            type="date"
+                            className="w-full p-3 bg-[#151823] border border-[#262B3B] rounded-2xl text-white outline-none transition-all duration-200 focus:border-[#33E1C9] focus:ring-4 focus:ring-[#33E1C9]/10"
+                            value={filterEnd}
+                            onChange={(event) =>
+                                setFilterEnd(event.target.value)
+                            }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {loadingHistory ? (
+                      <div className="py-8 flex justify-center">
+                        <LoadingSpinner />
+                      </div>
+                  ) : filteredHistory.length ? (
+                      <div className="flex flex-col mt-2">
+
+                        <div className="grid grid-cols-5 gap-4 pb-4 mb-3 border-b border-[#232633] text-xs uppercase tracking-[0.2em] text-[#7F859B] font-semibold">
+                          <div className="col-span-1">Tipo</div>
+                          <div className="col-span-1">Monto</div>
+                          <div className="col-span-1">Estado</div>
+                          <div className="col-span-1">Fecha</div>
+                          <div className="col-span-1 text-right">Acción</div>
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                          {filteredHistory.map((transaccion) => (
+                              <div
+                                  key={transaccion.id}
+                                  className="bg-[#151823] border border-[#232633] rounded-2xl px-3 hover:border-[#6D5DF6] transition-all duration-200"
+                              >
+                                <TransaccionItem
+                                    transaccion={{
+                                      ...transaccion,
+                                      tipoLabel:
+                                          TIPO_LABEL[transaccion.tipo] ||
+                                          transaccion.tipo,
+                                      estadoLabel:
+                                          ESTADO_LABEL[transaccion.estado] ||
+                                          transaccion.estado
+                                    }}
+                                    onRevert={handleRevert}
+                                    loading={revertingId === transaccion.id}
+                                />
+                              </div>
+                          ))}
+                        </div>
+                      </div>
+                  ) : (
+                      <div className="border border-dashed border-[#2B3145] rounded-3xl p-6 bg-[#131620] flex flex-col gap-2">
+                        <p className="text-sm text-[#B3B7C8]">
+                          No hay transacciones para los filtros seleccionados.
+                        </p>
+
+                        <p className="text-xs text-[#7F859B]">
+                          Ajusta el rango o el tipo para ver resultados.
+                        </p>
+                      </div>
+                  )}
+                </div>
+
+                {/* PROGRAMADAS */}
+                <section className="bg-[#0F1118] p-6 rounded-3xl border border-[#232633] shadow-[0_0_40px_rgba(0,0,0,0.45)] flex flex-col gap-5">
+
+                  <div className="flex flex-wrap justify-between items-center gap-3">
+                    <div>
+                      <h2 className="text-xl font-semibold text-white">
+                        Operaciones programadas
+                      </h2>
+
+                      <p className="text-sm text-[#8D91A3] mt-1">
+                        Calendario
+                      </p>
+                    </div>
+
+                    <span className="text-xs uppercase tracking-[0.2em] text-[#33E1C9] font-semibold">
+                Schedule
+              </span>
+                  </div>
+
+                  {scheduledOps.length ? (
+                      <div className="flex flex-col">
+
+                        <div className="grid grid-cols-5 gap-4 pb-4 mb-3 border-b border-[#232633] text-xs uppercase tracking-[0.2em] text-[#7F859B] font-semibold">
+                          <div className="col-span-2">
+                            Fecha de ejecución
+                          </div>
+
+                          <div className="col-span-1">Tipo</div>
+                          <div className="col-span-1">Monto</div>
+                          <div className="col-span-1 text-right">
+                            Estado
+                          </div>
+                        </div>
+
+                        {scheduledOps.map((op) => (
+                            <article
+                                key={op.id}
+                                className="grid grid-cols-5 gap-4 items-center py-4 border-b border-[#232633] last:border-b-0 hover:bg-[#151823] transition-all duration-200 px-3 -mx-3 rounded-2xl"
+                            >
+                              <div className="col-span-2 text-sm text-[#B3B7C8]">
+                                {op.executionDate}
+                              </div>
+
+                              <div className="col-span-1 text-sm font-medium text-white">
+                                {TIPO_LABEL[op.type] || op.type}
+                              </div>
+
+                              <div className="col-span-1 text-base font-bold text-[#33E1C9]">
+                                $ {Number(op.amount || 0).toLocaleString('es-CO')}
+                              </div>
+
+                              <div className="col-span-1 text-right text-xs font-semibold text-[#8D91A3]">
+                                {ESTADO_LABEL[op.status] || op.status}
+                              </div>
+                            </article>
+                        ))}
+                      </div>
+                  ) : (
+                      <div className="border border-dashed border-[#2B3145] rounded-3xl p-6 bg-[#131620]">
+                        <p className="text-sm text-[#B3B7C8]">
+                          No hay operaciones programadas.
+                        </p>
+                      </div>
+                  )}
+                </section>
+
+                {/* CARDS */}
+                {/* CARDS */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+                  {/* NOTIFICACIONES IZQUIERDA */}
+                  <div className="bg-[#0F1118] border border-[#232633] rounded-3xl p-4 shadow-[0_0_40px_rgba(0,0,0,0.45)]">
+                    <NotificacionesPanel alertas={notificationAlerts} />
+                  </div>
+
+                  {/* PERFIL DERECHA */}
+                  <div className="bg-[#0F1118] border border-[#232633] rounded-3xl p-4 shadow-[0_0_40px_rgba(0,0,0,0.45)]">
+                    <UsuarioCard usuario={usuario} />
+                  </div>
+
+                </div>
+              </div>
+            </>
+        )}
+      </section>
   );
 }
