@@ -110,12 +110,12 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     private Map<String, Usuario> crearUsuarios(LocalDateTime ahora) {
         Map<String, Usuario> usuarios = new LinkedHashMap<>();
-        usuarios.put("usr-ana", usuario("usr-ana", "Ana Torres", "ana.torres@melowallet.test", "3001112233", NivelUsuario.PLATINO, 6840, ahora.minusDays(210)));
-        usuarios.put("usr-carlos", usuario("usr-carlos", "Carlos Rios", "carlos.rios@melowallet.test", "3002223344", NivelUsuario.ORO, 2460, ahora.minusDays(170)));
-        usuarios.put("usr-valeria", usuario("usr-valeria", "Valeria Gomez", "valeria.gomez@melowallet.test", "3003334455", NivelUsuario.ORO, 3890, ahora.minusDays(132)));
-        usuarios.put("usr-mateo", usuario("usr-mateo", "Mateo Duarte", "mateo.duarte@melowallet.test", "3004445566", NivelUsuario.PLATA, 920, ahora.minusDays(96)));
-        usuarios.put("usr-sofia", usuario("usr-sofia", "Sofia Marin", "sofia.marin@melowallet.test", "3005556677", NivelUsuario.PLATA, 720, ahora.minusDays(58)));
-        usuarios.put("usr-nicolas", usuario("usr-nicolas", "Nicolas Pardo", "nicolas.pardo@melowallet.test", "3006667788", NivelUsuario.BRONCE, 280, ahora.minusDays(24)));
+        usuarios.put("usr-laura", usuario("usr-laura", "Laura Mendoza", "laura.mendoza@novawallet.test", "3114567821", NivelUsuario.PLATINO, 7420, ahora.minusDays(240)));
+        usuarios.put("usr-andres", usuario("usr-andres", "Andres Velasco", "andres.velasco@novawallet.test", "3125678932", NivelUsuario.ORO, 2980, ahora.minusDays(180)));
+        usuarios.put("usr-camila", usuario("usr-camila", "Camila Herrera", "camila.herrera@novawallet.test", "3136789043", NivelUsuario.ORO, 4150, ahora.minusDays(145)));
+        usuarios.put("usr-julian", usuario("usr-julian", "Julian Castro", "julian.castro@novawallet.test", "3147890154", NivelUsuario.PLATA, 1100, ahora.minusDays(100)));
+        usuarios.put("usr-paula", usuario("usr-paula", "Paula Ramirez", "paula.ramirez@novawallet.test", "3158901265", NivelUsuario.PLATA, 860, ahora.minusDays(65)));
+        usuarios.put("usr-diego", usuario("usr-diego", "Diego Salazar", "diego.salazar@novawallet.test", "3169012376", NivelUsuario.BRONCE, 340, ahora.minusDays(35)));
         return usuarios;
     }
 
