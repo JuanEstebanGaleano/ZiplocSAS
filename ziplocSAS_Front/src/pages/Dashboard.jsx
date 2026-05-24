@@ -48,10 +48,11 @@ function AnimatedNumber({ value, prefix = '', suffix = '', duration = 1200 }) {
 
 /* ── Barra de progreso animada ───────────────────────── */
 function ProgressArc({ value, max, size = 88 }) {
-  const pct = max > 0 ? Math.min(1, value / max) : 1;
+  // ✅ FIX: proteger contra max=0 o max<=value para no romper el arco
+  const safePct = max > 0 && max > value ? Math.min(1, value / max) : max > 0 ? 1 : 0;
   const r = (size - 10) / 2;
   const circ = 2 * Math.PI * r;
-  const dash = circ * pct;
+  const dash = circ * safePct;
   const cx = size / 2, cy = size / 2;
 
   return (
@@ -93,9 +94,9 @@ export default function Dashboard({ userId, onNavigate }) {
   const [tick, setTick] = useState(0);
   const [mounted, setMounted] = useState(false);
 
-  const billeterasQuery     = useBilleteras(userId);
-  const puntosQuery         = usePuntosRecompensas(userId);
-  const nivelQuery          = useNivelRecompensas(userId);
+  const billeterasQuery = useBilleteras(userId);
+  const puntosQuery     = usePuntosRecompensas(userId);
+  const nivelQuery      = useNivelRecompensas(userId);
 
   useEffect(() => {
     setMounted(true);
@@ -109,7 +110,6 @@ export default function Dashboard({ userId, onNavigate }) {
       }
     }
     loadUsuario();
-    // Pulso del clock
     const interval = setInterval(() => setTick(t => t + 1), 1000);
     return () => { active = false; clearInterval(interval); };
   }, [userId]);
@@ -120,12 +120,36 @@ export default function Dashboard({ userId, onNavigate }) {
   const transaccionesData  = transaccionesQuery.data?.transacciones || transaccionesQuery.data || [];
   const transacciones      = sortByRecentDate(transaccionesData).slice(0, 5);
 
-  const puntosData       = puntosQuery.data || {};
-  const nivelData        = nivelQuery.data || {};
-  const puntosActuales   = Number(nivelData.puntosActuales ?? puntosData.puntos ?? puntosData.puntosAcumulados ?? 0);
-  const nivelActual      = nivelData.nivel || puntosData.nivel || usuario?.nivel || 'Bronce';
-  const umbralSiguiente  = Number(nivelData.umbralSiguiente ?? 0);
-  const progreso         = umbralSiguiente > 0 ? Math.min(100, Math.round((puntosActuales / umbralSiguiente) * 100)) : 100;
+  const puntosData = puntosQuery.data || {};
+  const nivelData  = nivelQuery.data  || {};
+
+  // ✅ FIX: leer todas las variantes posibles que puede devolver la API real o el fallback demo
+  const puntosActuales = Number(
+      nivelData.puntosActuales
+      ?? nivelData.puntos
+      ?? puntosData.puntosAcumulados
+      ?? puntosData.puntos
+      ?? 0
+  );
+
+  const umbralSiguiente = Number(
+      nivelData.umbralSiguiente
+      ?? nivelData.umbral
+      ?? nivelData.puntosUmbral
+      ?? 0
+  );
+
+  // ✅ FIX: progreso correcto en todos los casos
+  // - umbral=0 → todavía no hay datos, mostrar 0%
+  // - puntos >= umbral → nivel completado, mostrar 100%
+  // - normal → calcular porcentaje real
+  const progreso = umbralSiguiente <= 0
+      ? 0
+      : puntosActuales >= umbralSiguiente
+          ? 100
+          : Math.round((puntosActuales / umbralSiguiente) * 100);
+
+  const nivelActual = nivelData.nivel || puntosData.nivel || usuario?.nivel || 'Bronce';
 
   const isLoading  = billeterasQuery.isLoading || puntosQuery.isLoading || nivelQuery.isLoading;
   const error      = billeterasQuery.error || puntosQuery.error || nivelQuery.error || usuarioError;
@@ -169,7 +193,6 @@ export default function Dashboard({ userId, onNavigate }) {
           overflow-x: hidden;
         }
 
-        /* ── Atmospheric bg ── */
         .db-atmo {
           position: fixed; inset: 0; z-index: 0; pointer-events: none;
           background:
@@ -178,20 +201,15 @@ export default function Dashboard({ userId, onNavigate }) {
             radial-gradient(ellipse 30% 30% at 50% 50%, rgba(0,255,136,0.025) 0%, transparent 70%);
         }
 
-        /* Scanlines */
         .db-scan {
           position: fixed; inset: 0; z-index: 0; pointer-events: none;
           background: repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 2px,
-            rgba(0,0,0,0.18) 2px,
-            rgba(0,0,0,0.18) 4px
+            0deg, transparent, transparent 2px,
+            rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 4px
           );
           opacity: 0.35;
         }
 
-        /* Noise overlay */
         .db-noise {
           position: fixed; inset: 0; z-index: 0; pointer-events: none;
           opacity: 0.025;
@@ -201,510 +219,274 @@ export default function Dashboard({ userId, onNavigate }) {
         }
 
         .db-content {
-          position: relative;
-          z-index: 1;
-          max-width: 1400px;
-          margin: 0 auto;
+          position: relative; z-index: 1;
+          max-width: 1400px; margin: 0 auto;
           padding: 0 1.5rem 4rem;
         }
 
-        /* ── Header ── */
         .db-header {
-          display: flex;
-          align-items: stretch;
-          justify-content: space-between;
+          display: flex; align-items: stretch; justify-content: space-between;
           border-bottom: 1px solid var(--border-accent);
-          padding: 1rem 0;
-          margin-bottom: 2rem;
-          gap: 1rem;
-          flex-wrap: wrap;
+          padding: 1rem 0; margin-bottom: 2rem;
+          gap: 1rem; flex-wrap: wrap;
         }
 
-        .db-header-left {
-          display: flex;
-          align-items: center;
-          gap: 1.25rem;
-        }
+        .db-header-left { display: flex; align-items: center; gap: 1.25rem; }
 
         .db-logo-mark {
           width: 36px; height: 36px;
-          border: 1.5px solid var(--green-border);
-          border-radius: 6px;
+          border: 1.5px solid var(--green-border); border-radius: 6px;
           display: flex; align-items: center; justify-content: center;
-          background: var(--green-muted);
-          position: relative;
-          overflow: hidden;
+          background: var(--green-muted); position: relative; overflow: hidden;
         }
-
         .db-logo-mark::after {
-          content: '';
-          position: absolute;
-          inset: -50%;
+          content: ''; position: absolute; inset: -50%;
           background: conic-gradient(from 0deg, transparent 70%, rgba(0,255,136,0.3) 100%);
           animation: spin 4s linear infinite;
         }
-
         @keyframes spin { to { transform: rotate(360deg); } }
-
         .db-logo-inner {
-          width: 14px; height: 14px;
-          background: var(--green);
-          clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-          z-index: 1;
+          width: 14px; height: 14px; background: var(--green);
+          clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); z-index: 1;
         }
 
-        .db-brand-text {
-          display: flex; flex-direction: column; gap: 1px;
-        }
-
+        .db-brand-text { display: flex; flex-direction: column; gap: 1px; }
         .db-brand-main {
-          font-family: var(--font-display);
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: var(--green);
-          letter-spacing: 0.15em;
-          text-transform: uppercase;
+          font-family: var(--font-display); font-size: 0.75rem; font-weight: 700;
+          color: var(--green); letter-spacing: 0.15em; text-transform: uppercase;
         }
-
         .db-brand-sub {
-          font-family: var(--font-mono);
-          font-size: 0.58rem;
-          color: var(--text-faint);
-          letter-spacing: 0.08em;
+          font-family: var(--font-mono); font-size: 0.58rem;
+          color: var(--text-faint); letter-spacing: 0.08em;
         }
 
-        .db-header-tickers {
-          display: flex;
-          align-items: center;
-          gap: 2rem;
-        }
-
-        .db-header-right {
-          display: flex;
-          align-items: center;
-          gap: 1.5rem;
-        }
+        .db-header-tickers { display: flex; align-items: center; gap: 2rem; }
+        .db-header-right   { display: flex; align-items: center; gap: 1.5rem; }
 
         .db-clock {
-          font-family: var(--font-mono);
-          font-size: 0.8rem;
-          color: var(--green-dim);
-          letter-spacing: 0.06em;
+          font-family: var(--font-mono); font-size: 0.8rem;
+          color: var(--green-dim); letter-spacing: 0.06em;
           display: flex; flex-direction: column; align-items: flex-end;
         }
-
-        .db-clock-date {
-          font-size: 0.58rem;
-          color: var(--text-faint);
-          margin-top: 2px;
-        }
+        .db-clock-date { font-size: 0.58rem; color: var(--text-faint); margin-top: 2px; }
 
         .db-user-chip {
           display: flex; align-items: center; gap: 0.6rem;
           padding: 0.4rem 0.9rem 0.4rem 0.5rem;
-          border: 1px solid var(--border);
-          border-radius: 999px;
-          background: var(--surface);
-          cursor: default;
+          border: 1px solid var(--border); border-radius: 999px;
+          background: var(--surface); cursor: default;
         }
-
         .db-user-avatar {
           width: 24px; height: 24px; border-radius: 50%;
           background: linear-gradient(135deg, var(--green-muted), rgba(0,207,255,0.1));
           border: 1px solid var(--green-border);
           display: flex; align-items: center; justify-content: center;
-          font-family: var(--font-mono);
-          font-size: 0.65rem;
-          color: var(--green);
-          font-weight: 700;
+          font-family: var(--font-mono); font-size: 0.65rem;
+          color: var(--green); font-weight: 700;
         }
+        .db-user-name { font-size: 0.78rem; color: var(--text-dim); font-weight: 500; }
 
-        .db-user-name {
-          font-size: 0.78rem;
-          color: var(--text-dim);
-          font-weight: 500;
-        }
-
-        /* ── Main layout ── */
-        .db-layout {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 1.25rem;
-        }
-
+        .db-layout { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
         @media (min-width: 1100px) {
-          .db-layout {
-            grid-template-columns: 1fr 1fr 340px;
-          }
+          .db-layout { grid-template-columns: 1fr 1fr 340px; }
         }
 
-        /* ── Hero metric strip ── */
         .db-metrics {
           grid-column: 1 / -1;
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 1px;
-          border: 1px solid var(--border-accent);
-          border-radius: 12px;
-          overflow: hidden;
-          background: var(--border-accent);
+          display: grid; grid-template-columns: repeat(3, 1fr);
+          gap: 1px; border: 1px solid var(--border-accent);
+          border-radius: 12px; overflow: hidden; background: var(--border-accent);
         }
 
         .db-metric {
-          background: var(--bg);
-          padding: 1.4rem 1.75rem;
+          background: var(--bg); padding: 1.4rem 1.75rem;
           display: flex; flex-direction: column; gap: 0.5rem;
-          position: relative;
-          overflow: hidden;
-          transition: background 0.2s;
+          position: relative; overflow: hidden; transition: background 0.2s;
         }
-
         .db-metric:hover { background: rgba(0,255,136,0.025); }
-
         .db-metric::before {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0;
-          height: 1px;
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
           background: linear-gradient(90deg, transparent, var(--green), transparent);
-          opacity: 0;
-          transition: opacity 0.3s;
+          opacity: 0; transition: opacity 0.3s;
         }
-
         .db-metric:hover::before { opacity: 1; }
 
         .db-metric-label {
-          font-family: var(--font-mono);
-          font-size: 0.6rem;
-          color: var(--text-faint);
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
+          font-family: var(--font-mono); font-size: 0.6rem;
+          color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.12em;
         }
-
         .db-metric-value {
-          font-family: var(--font-display);
-          font-weight: 700;
-          font-size: 1.75rem;
-          color: #fff;
-          letter-spacing: -0.02em;
-          line-height: 1;
+          font-family: var(--font-display); font-weight: 700;
+          font-size: 1.75rem; color: #fff; letter-spacing: -0.02em; line-height: 1;
         }
-
         .db-metric-value.accent { color: var(--green); }
-
         .db-metric-sub {
-          font-family: var(--font-mono);
-          font-size: 0.62rem;
-          color: var(--text-faint);
-          display: flex; align-items: center; gap: 0.4rem;
+          font-family: var(--font-mono); font-size: 0.62rem;
+          color: var(--text-faint); display: flex; align-items: center; gap: 0.4rem;
         }
-
         .db-metric-dot {
-          width: 5px; height: 5px; border-radius: 50%;
-          background: var(--green);
+          width: 5px; height: 5px; border-radius: 50%; background: var(--green);
           animation: pulse 2s ease-in-out infinite;
         }
-
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.4; transform: scale(0.7); }
         }
 
-        /* ── Panel base ── */
         .db-panel {
-          background: var(--surface);
-          border: 1px solid var(--border);
-          border-radius: 12px;
-          overflow: hidden;
+          background: var(--surface); border: 1px solid var(--border);
+          border-radius: 12px; overflow: hidden;
           display: flex; flex-direction: column;
           animation: fadeUp 0.5s ease both;
         }
-
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-
-        .db-panel.accent-border {
-          border-color: var(--border-accent);
-        }
+        .db-panel.accent-border { border-color: var(--border-accent); }
 
         .db-panel-head {
           display: flex; align-items: center; justify-content: space-between;
-          padding: 1rem 1.25rem;
-          border-bottom: 1px solid var(--border);
-          gap: 0.75rem;
+          padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); gap: 0.75rem;
         }
-
         .db-panel-title {
-          font-family: var(--font-mono);
-          font-size: 0.65rem;
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
-          color: var(--green-dim);
+          font-family: var(--font-mono); font-size: 0.65rem;
+          text-transform: uppercase; letter-spacing: 0.12em; color: var(--green-dim);
           display: flex; align-items: center; gap: 0.5rem;
         }
-
-        .db-panel-title::before {
-          content: '//';
-          color: var(--text-faint);
-          font-weight: 400;
-        }
-
+        .db-panel-title::before { content: '//'; color: var(--text-faint); font-weight: 400; }
         .db-panel-badge {
-          font-family: var(--font-mono);
-          font-size: 0.58rem;
-          color: var(--text-faint);
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          padding: 0.2rem 0.6rem;
-          border: 1px solid var(--border);
-          border-radius: 4px;
+          font-family: var(--font-mono); font-size: 0.58rem; color: var(--text-faint);
+          text-transform: uppercase; letter-spacing: 0.1em;
+          padding: 0.2rem 0.6rem; border: 1px solid var(--border); border-radius: 4px;
         }
-
         .db-panel-body { padding: 1.25rem; flex: 1; }
 
-        /* ── Wallet table ── */
         .db-wtable-head {
-          display: grid;
-          grid-template-columns: 1fr auto auto auto;
-          gap: 1rem;
-          padding: 0 0.5rem 0.6rem;
-          font-family: var(--font-mono);
-          font-size: 0.58rem;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          color: var(--text-faint);
-          border-bottom: 1px solid var(--border);
-          margin-bottom: 0.25rem;
+          display: grid; grid-template-columns: 1fr auto auto auto;
+          gap: 1rem; padding: 0 0.5rem 0.6rem;
+          font-family: var(--font-mono); font-size: 0.58rem;
+          text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint);
+          border-bottom: 1px solid var(--border); margin-bottom: 0.25rem;
         }
-
         .db-wrow {
-          display: grid;
-          grid-template-columns: 1fr auto auto auto;
-          gap: 1rem;
-          align-items: center;
-          padding: 0.85rem 0.5rem;
+          display: grid; grid-template-columns: 1fr auto auto auto;
+          gap: 1rem; align-items: center; padding: 0.85rem 0.5rem;
           border-bottom: 1px solid rgba(255,255,255,0.035);
-          transition: background 0.15s;
-          cursor: default;
+          transition: background 0.15s; cursor: default;
         }
-
         .db-wrow:last-child { border-bottom: none; }
         .db-wrow:hover { background: var(--surface-hover); border-radius: 8px; }
-
         .db-wrow-name {
-          font-size: 0.82rem;
-          color: var(--text);
-          font-weight: 500;
+          font-size: 0.82rem; color: var(--text); font-weight: 500;
           display: flex; flex-direction: column; gap: 2px;
         }
-
         .db-wrow-tipo {
-          font-family: var(--font-mono);
-          font-size: 0.6rem;
-          color: var(--text-faint);
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
+          font-family: var(--font-mono); font-size: 0.6rem;
+          color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em;
         }
-
         .db-wrow-saldo {
-          font-family: var(--font-mono);
-          font-size: 0.82rem;
-          color: var(--green);
-          font-weight: 700;
-          white-space: nowrap;
+          font-family: var(--font-mono); font-size: 0.82rem;
+          color: var(--green); font-weight: 700; white-space: nowrap;
         }
 
-        /* ── TX rows ── */
         .db-tx-head {
-          display: grid;
-          grid-template-columns: 1fr auto auto;
-          gap: 1rem;
-          padding: 0 0.5rem 0.6rem;
-          font-family: var(--font-mono);
-          font-size: 0.58rem;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          color: var(--text-faint);
-          border-bottom: 1px solid var(--border);
-          margin-bottom: 0.25rem;
+          display: grid; grid-template-columns: 1fr auto auto;
+          gap: 1rem; padding: 0 0.5rem 0.6rem;
+          font-family: var(--font-mono); font-size: 0.58rem;
+          text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint);
+          border-bottom: 1px solid var(--border); margin-bottom: 0.25rem;
         }
-
         .db-tx-row {
-          display: grid;
-          grid-template-columns: 1fr auto auto;
-          gap: 1rem;
-          align-items: center;
-          padding: 0.85rem 0.5rem;
-          border-bottom: 1px solid rgba(255,255,255,0.035);
-          transition: background 0.15s;
+          display: grid; grid-template-columns: 1fr auto auto;
+          gap: 1rem; align-items: center; padding: 0.85rem 0.5rem;
+          border-bottom: 1px solid rgba(255,255,255,0.035); transition: background 0.15s;
         }
-
         .db-tx-row:last-child { border-bottom: none; }
         .db-tx-row:hover { background: var(--surface-hover); border-radius: 8px; }
-
         .db-tx-tipo {
-          font-size: 0.8rem;
-          color: var(--text);
-          font-weight: 500;
+          font-size: 0.8rem; color: var(--text); font-weight: 500;
           display: flex; flex-direction: column; gap: 2px;
         }
-
-        .db-tx-fecha {
-          font-family: var(--font-mono);
-          font-size: 0.6rem;
-          color: var(--text-faint);
-        }
-
+        .db-tx-fecha { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-faint); }
         .db-tx-monto {
-          font-family: var(--font-mono);
-          font-size: 0.82rem;
-          font-weight: 700;
-          color: var(--cyan);
-          white-space: nowrap;
+          font-family: var(--font-mono); font-size: 0.82rem;
+          font-weight: 700; color: var(--cyan); white-space: nowrap;
         }
-
         .db-tx-estado {
-          font-family: var(--font-mono);
-          font-size: 0.6rem;
-          padding: 0.15rem 0.5rem;
-          border-radius: 4px;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-          white-space: nowrap;
+          font-family: var(--font-mono); font-size: 0.6rem;
+          padding: 0.15rem 0.5rem; border-radius: 4px;
+          text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;
         }
-
         .estado-completada { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
-        .estado-pendiente  { background: rgba(255,176,32,0.1);  color: var(--amber);  border: 1px solid rgba(255,176,32,0.2); }
-        .estado-fallida    { background: rgba(255,51,85,0.1);   color: var(--red);    border: 1px solid rgba(255,51,85,0.2); }
+        .estado-pendiente  { background: rgba(255,176,32,0.1); color: var(--amber); border: 1px solid rgba(255,176,32,0.2); }
+        .estado-fallida    { background: rgba(255,51,85,0.1);  color: var(--red);   border: 1px solid rgba(255,51,85,0.2); }
         .estado-default    { background: rgba(255,255,255,0.05); color: var(--text-dim); border: 1px solid var(--border); }
 
         /* ── Nivel card ── */
-        .db-nivel-arc {
-          display: flex;
-          align-items: center;
-          gap: 1.25rem;
-          margin-bottom: 1.25rem;
-        }
-
-        .db-nivel-arc-text {
-          display: flex; flex-direction: column; gap: 0.3rem;
-        }
-
+        .db-nivel-arc { display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.25rem; }
+        .db-nivel-arc-text { display: flex; flex-direction: column; gap: 0.3rem; }
         .db-nivel-name {
-          font-family: var(--font-display);
-          font-size: 1.1rem;
-          font-weight: 700;
-          color: var(--green);
-          letter-spacing: 0.04em;
+          font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
+          color: var(--green); letter-spacing: 0.04em;
+        }
+        .db-nivel-pts { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-faint); }
+
+        /* ✅ FIX: etiqueta de carga mientras umbral = 0 */
+        .db-nivel-loading {
+          font-family: var(--font-mono); font-size: 0.62rem;
+          color: var(--text-faint); letter-spacing: 0.06em;
+          animation: breathe 1.5s ease-in-out infinite;
+        }
+        @keyframes breathe {
+          0%,100% { opacity: 0.3; }
+          50%      { opacity: 1; }
         }
 
-        .db-nivel-pts {
-          font-family: var(--font-mono);
-          font-size: 0.65rem;
-          color: var(--text-faint);
-        }
-
-        .db-progress-bar-wrap {
-          margin-top: 0.5rem;
-          display: flex; flex-direction: column; gap: 0.5rem;
-        }
-
-        .db-progress-bar-track {
-          height: 3px;
-          background: rgba(255,255,255,0.06);
-          border-radius: 999px;
-          overflow: hidden;
-        }
-
+        .db-progress-bar-wrap { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        .db-progress-bar-track { height: 3px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; }
         .db-progress-bar-fill {
-          height: 100%;
-          border-radius: 999px;
+          height: 100%; border-radius: 999px;
           background: linear-gradient(90deg, var(--green), var(--cyan));
           transition: width 1s cubic-bezier(0.4,0,0.2,1);
         }
-
         .db-progress-label {
-          font-family: var(--font-mono);
-          font-size: 0.6rem;
-          color: var(--text-faint);
+          font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-faint);
           display: flex; justify-content: space-between;
         }
 
-        /* ── Perfil field ── */
-        .db-perfil-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1rem 1.25rem;
-        }
-
+        .db-perfil-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.25rem; }
         .db-field { display: flex; flex-direction: column; gap: 0.25rem; }
-
         .db-field-label {
-          font-family: var(--font-mono);
-          font-size: 0.58rem;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          color: var(--text-faint);
+          font-family: var(--font-mono); font-size: 0.58rem;
+          text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint);
         }
+        .db-field-value { font-size: 0.82rem; color: var(--text); font-weight: 400; word-break: break-all; }
 
-        .db-field-value {
-          font-size: 0.82rem;
-          color: var(--text);
-          font-weight: 400;
-          word-break: break-all;
-        }
-
-        /* ── Empty state ── */
         .db-empty {
-          border: 1px dashed rgba(0,255,136,0.12);
-          border-radius: 8px;
-          padding: 1.25rem;
-          background: rgba(0,255,136,0.018);
+          border: 1px dashed rgba(0,255,136,0.12); border-radius: 8px;
+          padding: 1.25rem; background: rgba(0,255,136,0.018);
         }
-
         .db-empty p {
-          font-family: var(--font-mono);
-          font-size: 0.72rem;
-          color: var(--text-faint);
-          margin-bottom: 0.75rem;
+          font-family: var(--font-mono); font-size: 0.72rem;
+          color: var(--text-faint); margin-bottom: 0.75rem;
         }
-
         .db-btn-ghost {
-          background: none;
-          border: 1px solid var(--green-border);
-          color: var(--green-dim);
-          font-family: var(--font-mono);
-          font-size: 0.68rem;
-          padding: 0.35rem 0.85rem;
-          border-radius: 5px;
-          cursor: pointer;
-          letter-spacing: 0.06em;
-          transition: background 0.15s, color 0.15s;
+          background: none; border: 1px solid var(--green-border); color: var(--green-dim);
+          font-family: var(--font-mono); font-size: 0.68rem;
+          padding: 0.35rem 0.85rem; border-radius: 5px; cursor: pointer;
+          letter-spacing: 0.06em; transition: background 0.15s, color 0.15s;
           text-transform: uppercase;
         }
-
-        .db-btn-ghost:hover {
-          background: var(--green-muted);
-          color: var(--green);
-        }
-
+        .db-btn-ghost:hover { background: var(--green-muted); color: var(--green); }
         .db-btn-text {
-          background: none; border: none;
-          color: var(--green-dim);
-          font-family: var(--font-mono);
-          font-size: 0.65rem;
-          cursor: pointer;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          transition: color 0.15s;
-          padding: 0;
+          background: none; border: none; color: var(--green-dim);
+          font-family: var(--font-mono); font-size: 0.65rem;
+          cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase;
+          transition: color 0.15s; padding: 0;
         }
-
         .db-btn-text:hover { color: var(--green); }
 
-        /* animation delays */
         .d1 { animation-delay: 0.05s; }
         .d2 { animation-delay: 0.10s; }
         .d3 { animation-delay: 0.15s; }
@@ -712,7 +494,6 @@ export default function Dashboard({ userId, onNavigate }) {
         .d5 { animation-delay: 0.25s; }
       `}</style>
 
-        {/* Atmospheric layers */}
         <div className="db-atmo" />
         <div className="db-scan" />
         <div className="db-noise" />
@@ -733,9 +514,9 @@ export default function Dashboard({ userId, onNavigate }) {
               </div>
 
               <div className="db-header-tickers">
-                <StatusTicker label="Sistema" value="ONLINE" up={true} />
+                <StatusTicker label="Sistema"    value="ONLINE"           up={true} />
                 <StatusTicker label="Billeteras" value={billeteras.length} up={billeteras.length > 0} />
-                <StatusTicker label="Puntos" value={puntosActuales} up={puntosActuales > 0} />
+                <StatusTicker label="Puntos"     value={puntosActuales}    up={puntosActuales > 0} />
               </div>
 
               <div className="db-header-right">
@@ -809,10 +590,7 @@ export default function Dashboard({ userId, onNavigate }) {
                       {billeteras.length ? (
                           <>
                             <div className="db-wtable-head">
-                              <span>Nombre</span>
-                              <span>Tipo</span>
-                              <span>Saldo</span>
-                              <span>Acción</span>
+                              <span>Nombre</span><span>Tipo</span><span>Saldo</span><span>Acción</span>
                             </div>
                             {billeteras.map((wallet) => (
                                 <div key={wallet.id} className="db-wrow">
@@ -841,7 +619,6 @@ export default function Dashboard({ userId, onNavigate }) {
                       <span className="db-panel-title">Actividad reciente</span>
                       <span className="db-panel-badge">Últimas 5</span>
                     </div>
-                    
                     <div className="db-panel-body">
                       {transaccionesQuery.isLoading ? (
                           <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
@@ -850,9 +627,7 @@ export default function Dashboard({ userId, onNavigate }) {
                       ) : transacciones.length ? (
                           <>
                             <div className="db-tx-head">
-                              <span>Tipo / Fecha</span>
-                              <span>Monto</span>
-                              <span>Estado</span>
+                              <span>Tipo / Fecha</span><span>Monto</span><span>Estado</span>
                             </div>
                             {transacciones.map((tx) => {
                               const estado = String(tx.estado || tx.status || '').toLowerCase();
@@ -885,7 +660,7 @@ export default function Dashboard({ userId, onNavigate }) {
                     </div>
                   </div>
 
-                  {/* ── Sidebar: Nivel + Perfil ── */}
+                  {/* ── Sidebar ── */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
                     {/* Nivel */}
@@ -897,32 +672,54 @@ export default function Dashboard({ userId, onNavigate }) {
                       <div className="db-panel-body">
                         <div className="db-nivel-arc">
                           <div style={{ position: 'relative', flexShrink: 0 }}>
-                            <ProgressArc value={puntosActuales} max={umbralSiguiente || puntosActuales || 1} size={80} />
+                            <ProgressArc
+                                value={puntosActuales}
+                                max={umbralSiguiente || puntosActuales || 1}
+                                size={80}
+                            />
                             <div style={{
                               position: 'absolute', inset: 0,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--green)',
-                              fontWeight: 700,
+                              fontFamily: 'var(--font-mono)', fontSize: '0.65rem',
+                              color: 'var(--green)', fontWeight: 700,
                             }}>
-                              {progreso}%
+                              {/* ✅ FIX: mostrar '…' mientras carga, porcentaje real después */}
+                              {nivelQuery.isLoading ? '…' : `${progreso}%`}
                             </div>
                           </div>
                           <div className="db-nivel-arc-text">
                             <span className="db-nivel-name">{nivelActual.toUpperCase()}</span>
-                            <span className="db-nivel-pts">{puntosActuales} puntos acumulados</span>
+                            <span className="db-nivel-pts">
+                          {nivelQuery.isLoading
+                              ? <span className="db-nivel-loading">Cargando puntos…</span>
+                              : `${puntosActuales} puntos acumulados`
+                          }
+                        </span>
                           </div>
                         </div>
+
                         <div className="db-progress-bar-wrap">
                           <div className="db-progress-bar-track">
+                            {/* ✅ FIX: barra en 0 mientras carga, animada al llegar el dato */}
                             <div className="db-progress-bar-fill" style={{ width: `${progreso}%` }} />
                           </div>
                           <div className="db-progress-label">
                             <span>{puntosActuales} pts</span>
-                            <span>{umbralSiguiente > 0 ? `${umbralSiguiente} pts` : 'Máximo'}</span>
+                            <span>
+                          {umbralSiguiente > 0
+                              ? `${umbralSiguiente} pts para el siguiente nivel`
+                              : nivelQuery.isLoading ? '…' : 'Nivel máximo'
+                          }
+                        </span>
                           </div>
                         </div>
+
                         <div style={{ marginTop: '1rem' }}>
-                          <button className="db-btn-ghost" style={{ width: '100%', textAlign: 'center' }} onClick={() => onNavigate('recompensas')}>
+                          <button
+                              className="db-btn-ghost"
+                              style={{ width: '100%', textAlign: 'center' }}
+                              onClick={() => onNavigate('recompensas')}
+                          >
                             Ver recompensas →
                           </button>
                         </div>
@@ -972,8 +769,6 @@ export default function Dashboard({ userId, onNavigate }) {
                     </div>
 
                   </div>
-                  {/* fin sidebar */}
-
                 </div>
             )}
 

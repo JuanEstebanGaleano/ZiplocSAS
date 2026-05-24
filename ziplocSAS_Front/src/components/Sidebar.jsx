@@ -1,4 +1,4 @@
-import { LayoutDashboard, Wallet, ArrowRightLeft, LineChart, Gift, Bell, Clock, Users, Menu, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Wallet, ArrowRightLeft, LineChart, Gift, Bell, Clock, Users, Menu } from 'lucide-react';
 
 export default function Sidebar({ activeView, onNavigate, collapsed, setCollapsed }) {
   const coreItems = [
@@ -22,112 +22,177 @@ export default function Sidebar({ activeView, onNavigate, collapsed, setCollapse
         <button
             key={item.key}
             type="button"
-            className={`group w-full flex items-center gap-3 text-left py-2.5 px-3 text-sm font-medium transition-all duration-150 rounded-lg outline-none
-          focus-visible:ring-2 focus-visible:ring-[#D38343]/60 focus-visible:ring-offset-1 focus-visible:ring-offset-[#141414]
-          ${isActive
-                ? 'bg-[#D38343]/12 text-[#E8C99A] border border-[#D38343]/25'
-                : 'text-[#8A8A8A] border border-transparent hover:bg-[#1E1E1E] hover:text-[#C8C8C8]'
-            }`}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: collapsed ? 0 : '0.75rem',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              padding: collapsed ? '0.75rem' : '0.7rem 1rem',
+              borderRadius: '10px',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontFamily: "'DM Sans', sans-serif",
+              fontWeight: isActive ? 600 : 400,
+              letterSpacing: '-0.01em',
+              transition: 'background 0.18s, color 0.18s, box-shadow 0.18s',
+              background: isActive
+                  ? 'linear-gradient(135deg, rgba(99,88,255,0.22) 0%, rgba(34,211,165,0.12) 100%)'
+                  : 'transparent',
+              color: isActive ? '#fff' : 'rgba(255,255,255,0.4)',
+              boxShadow: isActive ? 'inset 0 0 0 1px rgba(99,88,255,0.35)' : 'none',
+              outline: 'none',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}
+            onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
             onClick={() => onNavigate(item.key)}
             aria-pressed={isActive}
-            title={collapsed ? item.label : undefined}
         >
-          <Icon
-              size={17}
-              className={`shrink-0 transition-colors duration-150 ${isActive ? 'text-[#D38343]' : 'text-[#5A5A5A] group-hover:text-[#9A9A9A]'}`}
-          />
-          {!collapsed && (
-              <>
-                <span className="flex-1 truncate">{item.label}</span>
-                {isActive && <ChevronRight size={13} className="text-[#D38343]/60 shrink-0" />}
-              </>
+          {/* Punto activo */}
+          {isActive && (
+              <span style={{
+                position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
+                width: 3, height: '60%', borderRadius: '0 3px 3px 0',
+                background: 'linear-gradient(180deg, #6358ff, #22d3a5)',
+              }} />
           )}
+          <Icon size={18} style={{ color: isActive ? '#a89eff' : 'inherit', flexShrink: 0 }} />
+          {!collapsed && <span>{item.label}</span>}
         </button>
     );
   };
 
   return (
-      <aside
-          className={`
-        relative min-h-screen flex flex-col
-        bg-[#111111] border-r border-[#222222]
-        transition-all duration-200 ease-in-out shrink-0 overflow-hidden
-        ${collapsed ? 'w-[60px]' : 'w-[240px]'}
-      `}
-      >
-        {/* Header */}
-        <div className={`flex items-center h-16 border-b border-[#1E1E1E] ${collapsed ? 'justify-center px-3' : 'px-4 gap-3'}`}>
-          {/* Logo mark */}
-          <div className="w-7 h-7 rounded-md bg-[#D38343]/15 border border-[#D38343]/30 flex items-center justify-center shrink-0">
-            <div className="w-2.5 h-2.5 rounded-sm bg-[#D38343]" />
-          </div>
-          {!collapsed && (
-              <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#5A5A5A] flex-1 truncate">
-            ZiplocSAS
-          </span>
-          )}
-          <button
-              onClick={() => setCollapsed(!collapsed)}
-              className={`
-            text-[#3A3A3A] hover:text-[#D38343] transition-colors duration-150
-            outline-none focus-visible:ring-1 focus-visible:ring-[#D38343]/60 rounded-md p-1
-            ${collapsed ? 'hidden' : ''}
-          `}
-              aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'}
-          >
-            <Menu size={16} />
-          </button>
-        </div>
+      <>
+        <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+      `}</style>
+        <aside style={{
+          minHeight: '100vh',
+          width: collapsed ? 72 : 260,
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0,
+          background: 'rgba(10,10,15,0.95)',
+          borderRight: '1px solid rgba(255,255,255,0.06)',
+          backdropFilter: 'blur(20px)',
+          transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
+          overflow: 'hidden',
+          position: 'relative',
+          zIndex: 10,
+        }}>
 
-        {/* Collapsed toggle */}
-        {collapsed && (
+          {/* Glow decorativo superior */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: 180,
+            background: 'radial-gradient(ellipse 120% 80% at 50% -20%, rgba(99,88,255,0.18) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }} />
+
+          {/* Header */}
+          <div style={{
+            padding: collapsed ? '1.5rem 0' : '1.5rem 1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'space-between',
+            gap: '0.75rem',
+            borderBottom: '1px solid rgba(255,255,255,0.05)',
+            marginBottom: '0.5rem',
+            position: 'relative',
+          }}>
+            {!collapsed && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <img
+                      src="https://images.genius.com/2ac9006741241a4565391f4b145cc4dd.1000x1000x1.jpg"
+                      alt="ZiplocSAS"
+                      style={{ width: 30, height: 30, borderRadius: 7, objectFit: 'cover', boxShadow: '0 2px 10px rgba(99,88,255,0.35)' }}
+                  />
+                  <span style={{
+                    fontFamily: "'Syne', sans-serif",
+                    fontWeight: 800,
+                    fontSize: '0.9rem',
+                    color: '#fff',
+                    letterSpacing: '-0.03em',
+                    whiteSpace: 'nowrap',
+                  }}>ZiplocSAS</span>
+                </div>
+            )}
+            {collapsed && (
+                <img
+                    src="https://images.genius.com/2ac9006741241a4565391f4b145cc4dd.1000x1000x1.jpg"
+                    alt="ZiplocSAS"
+                    style={{ width: 30, height: 30, borderRadius: 7, objectFit: 'cover', boxShadow: '0 2px 10px rgba(99,88,255,0.35)', marginBottom: '0.25rem' }}
+                />
+            )}
             <button
-                onClick={() => setCollapsed(false)}
-                className="absolute top-4 right-0 translate-x-1/2 w-5 h-5 rounded-full bg-[#1E1E1E] border border-[#2E2E2E] flex items-center justify-center text-[#5A5A5A] hover:text-[#D38343] transition-colors z-10"
-                aria-label="Expandir menú"
+                onClick={() => setCollapsed(!collapsed)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'rgba(255,255,255,0.35)', padding: '0.25rem',
+                  borderRadius: 6, transition: 'color 0.18s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = '#a89eff'}
+                onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}
             >
-              <ChevronRight size={11} />
+              <Menu size={18} />
             </button>
-        )}
+          </div>
 
-        {/* Nav sections */}
-        <nav className="flex-1 flex flex-col gap-6 py-5 px-2 overflow-y-auto overflow-x-hidden">
-          {/* Section label */}
-          {!collapsed && (
-              <span className="px-3 text-[10px] font-semibold tracking-[0.14em] uppercase text-[#363636]">
-            Principal
-          </span>
-          )}
-          <div className="flex flex-col gap-0.5 -mt-4">
+          {/* Nav principal */}
+          <div style={{ padding: '0.5rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            {!collapsed && (
+                <span style={{
+                  fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em',
+                  color: 'rgba(255,255,255,0.2)', fontWeight: 600, padding: '0.4rem 0.5rem 0.2rem',
+                }}>Principal</span>
+            )}
             {coreItems.map(renderItem)}
           </div>
 
-          <div className="h-px bg-[#1C1C1C] mx-1" />
+          {/* Divider */}
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '0.5rem 1.25rem' }} />
 
-          {!collapsed && (
-              <span className="px-3 text-[10px] font-semibold tracking-[0.14em] uppercase text-[#363636] -mb-4">
-            Actividad
-          </span>
-          )}
-          <div className="flex flex-col gap-0.5">
+          {/* Nav actividad */}
+          <div style={{ padding: '0.5rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            {!collapsed && (
+                <span style={{
+                  fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em',
+                  color: 'rgba(255,255,255,0.2)', fontWeight: 600, padding: '0.4rem 0.5rem 0.2rem',
+                }}>Actividad</span>
+            )}
             {activityItems.map(renderItem)}
           </div>
-        </nav>
 
-        {/* Footer */}
-        <div className={`border-t border-[#1C1C1C] p-3 ${collapsed ? 'flex justify-center' : ''}`}>
-          <div className={`flex items-center gap-2.5 ${collapsed ? '' : 'px-1'}`}>
-            <div className="w-7 h-7 rounded-full bg-[#1E1E1E] border border-[#2A2A2A] flex items-center justify-center shrink-0">
-              <span className="text-[10px] font-bold text-[#D38343]">U</span>
-            </div>
+          {/* Footer */}
+          <div style={{
+            marginTop: 'auto',
+            padding: collapsed ? '1.25rem 0' : '1.25rem',
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: collapsed ? 'center' : 'flex-start',
+            gap: '0.2rem',
+          }}>
             {!collapsed && (
-                <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-medium text-[#9A9A9A] truncate">Usuario activo</span>
-                  <span className="text-[10px] text-[#4A4A4A] truncate">Sesión actual</span>
-                </div>
+                <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(255,255,255,0.22)' }}>
+              Sesión activa
+            </span>
             )}
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: 'linear-gradient(135deg, #6358ff, #22d3a5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '0.7rem', fontWeight: 700, color: '#fff',
+              flexShrink: 0,
+            }}>ID</div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      </>
   );
 }
