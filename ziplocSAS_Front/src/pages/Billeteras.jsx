@@ -49,7 +49,7 @@ export default function Billeteras({ userId }) {
   const billeterasQuery = useBilleteras(userId);
   const createMutation = useCrearBilletera();
   const updateMutation = useActualizarBilletera();
-  
+
   // Estado local
   const [selectedWallet, setSelectedWallet] = useState(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -274,8 +274,8 @@ export default function Billeteras({ userId }) {
                   {billeteras.map(wallet => {
                     const isSelected = selectedWallet?.id === wallet.id;
                     return (
-                      <article 
-                        key={wallet.id} 
+                      <article
+                        key={wallet.id}
                         className={`p-4 border-b-2 transition-all duration-150 cursor-pointer rounded-t-md hover:bg-[#F8F6F2]
                           ${isSelected ? 'border-b-acento bg-[#F8F6F2]' : 'border-b-borde'}`}
                         onClick={() => handleSelect(wallet)}
@@ -291,8 +291,8 @@ export default function Billeteras({ userId }) {
                         </div>
                         <div className="flex justify-between items-end mt-4">
                           <strong className="text-xl font-bold text-textoPrincipal">$ {Number(wallet.saldo || 0).toLocaleString('es-CO')}</strong>
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             className="text-xs font-medium text-acento hover:text-acentoHover transition-colors"
                             onClick={(e) => { e.stopPropagation(); handleEdit(wallet); }}
                           >

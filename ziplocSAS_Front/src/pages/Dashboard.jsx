@@ -1,7 +1,6 @@
 import NivelBadge from '../components/NivelBadge';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AlertaPanel from '../components/AlertaPanel';
-import TransaccionItem from '../components/TransaccionItem';
 import { useBilleteras } from '../hooks/useBilleteras';
 import { useTransacciones } from '../hooks/useTransacciones';
 import { usePuntosRecompensas, useNivelRecompensas } from '../hooks/useRecompensas';
@@ -44,35 +43,6 @@ function AnimatedNumber({ value, prefix = '', suffix = '', duration = 1200 }) {
   }, [value, duration]);
 
   return <>{prefix}{moneyFormatter.format(display)}{suffix}</>;
-}
-
-/* ── Barra de progreso animada ───────────────────────── */
-function ProgressArc({ value, max, size = 88 }) {
-  // ✅ FIX: proteger contra max=0 o max<=value para no romper el arco
-  const safePct = max > 0 && max > value ? Math.min(1, value / max) : max > 0 ? 1 : 0;
-  const r = (size - 10) / 2;
-  const circ = 2 * Math.PI * r;
-  const dash = circ * safePct;
-  const cx = size / 2, cy = size / 2;
-
-  return (
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,255,136,0.08)" strokeWidth={5} />
-        <circle
-            cx={cx} cy={cy} r={r} fill="none"
-            stroke="url(#arcGrad)" strokeWidth={5}
-            strokeDasharray={`${dash} ${circ - dash}`}
-            strokeLinecap="round"
-            style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.4,0,0.2,1)' }}
-        />
-        <defs>
-          <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#00ff88" />
-            <stop offset="100%" stopColor="#00cfff" />
-          </linearGradient>
-        </defs>
-      </svg>
-  );
 }
 
 /* ── Ticker de estado ────────────────────────────────── */
@@ -120,34 +90,15 @@ export default function Dashboard({ userId, onNavigate }) {
   const transaccionesData  = transaccionesQuery.data?.transacciones || transaccionesQuery.data || [];
   const transacciones      = sortByRecentDate(transaccionesData).slice(0, 5);
 
-  const puntosData = puntosQuery.data || {};
-  const nivelData  = nivelQuery.data  || {};
+  const puntosData = puntosQuery.data|| {};
+  const nivelData  = nivelQuery.data || {};
 
-  // ✅ FIX: leer todas las variantes posibles que puede devolver la API real o el fallback demo
-  const puntosActuales = Number(
-      nivelData.puntosActuales
-      ?? nivelData.puntos
-      ?? puntosData.puntosAcumulados
-      ?? puntosData.puntos
-      ?? 0
-  );
-
-  const umbralSiguiente = Number(
-      nivelData.umbralSiguiente
-      ?? nivelData.umbral
-      ?? nivelData.puntosUmbral
-      ?? 0
-  );
-
-  // ✅ FIX: progreso correcto en todos los casos
-  // - umbral=0 → todavía no hay datos, mostrar 0%
-  // - puntos >= umbral → nivel completado, mostrar 100%
-  // - normal → calcular porcentaje real
-  const progreso = umbralSiguiente <= 0
-      ? 0
-      : puntosActuales >= umbralSiguiente
-          ? 100
-          : Math.round((puntosActuales / umbralSiguiente) * 100);
+  const puntosActuales = (() => {
+    if (typeof puntosData === 'number') return puntosData;
+    if (typeof puntosData === 'string' && !isNaN(+puntosData)) return +puntosData;
+    if (puntosData) return Number(puntosData.puntosActuales ?? puntosData.puntos ?? puntosData.puntosAcumulados ?? 0);
+    return Number(nivelData.puntosActuales ?? nivelData.puntos ?? 0);
+  })();
 
   const nivelActual = nivelData.nivel || puntosData.nivel || usuario?.nivel || 'Bronce';
 
@@ -533,9 +484,17 @@ export default function Dashboard({ userId, onNavigate }) {
               </div>
             </header>
 
-            {error && (
+            {(error || usuarioError) && (
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <AlertaPanel type="error" title="Error de carga" message={error?.message || String(error)} />
+                  <AlertaPanel
+                      type="error"
+                      title="Error de carga"
+                      message={
+                        error && usuarioError
+                            ? `Datos: ${error?.message || String(error)} · Usuario: ${usuarioError}`
+                            : error?.message || String(error || usuarioError)
+                      }
+                  />
                 </div>
             )}
 
@@ -664,66 +623,15 @@ export default function Dashboard({ userId, onNavigate }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
                     {/* Nivel */}
-                    <div className="db-panel accent-border d3">
-                      <div className="db-panel-head">
-                        <span className="db-panel-title">Nivel de fidelización</span>
-                        <span className="db-panel-badge">Estado</span>
-                      </div>
-                      <div className="db-panel-body">
-                        <div className="db-nivel-arc">
-                          <div style={{ position: 'relative', flexShrink: 0 }}>
-                            <ProgressArc
-                                value={puntosActuales}
-                                max={umbralSiguiente || puntosActuales || 1}
-                                size={80}
-                            />
-                            <div style={{
-                              position: 'absolute', inset: 0,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontFamily: 'var(--font-mono)', fontSize: '0.65rem',
-                              color: 'var(--green)', fontWeight: 700,
-                            }}>
-                              {/* ✅ FIX: mostrar '…' mientras carga, porcentaje real después */}
-                              {nivelQuery.isLoading ? '…' : `${progreso}%`}
-                            </div>
-                          </div>
-                          <div className="db-nivel-arc-text">
-                            <span className="db-nivel-name">{nivelActual.toUpperCase()}</span>
-                            <span className="db-nivel-pts">
-                          {nivelQuery.isLoading
-                              ? <span className="db-nivel-loading">Cargando puntos…</span>
-                              : `${puntosActuales} puntos acumulados`
-                          }
-                        </span>
-                          </div>
-                        </div>
-
-                        <div className="db-progress-bar-wrap">
-                          <div className="db-progress-bar-track">
-                            {/* ✅ FIX: barra en 0 mientras carga, animada al llegar el dato */}
-                            <div className="db-progress-bar-fill" style={{ width: `${progreso}%` }} />
-                          </div>
-                          <div className="db-progress-label">
-                            <span>{puntosActuales} pts</span>
-                            <span>
-                          {umbralSiguiente > 0
-                              ? `${umbralSiguiente} pts para el siguiente nivel`
-                              : nivelQuery.isLoading ? '…' : 'Nivel máximo'
-                          }
-                        </span>
-                          </div>
-                        </div>
-
-                        <div style={{ marginTop: '1rem' }}>
-                          <button
-                              className="db-btn-ghost"
-                              style={{ width: '100%', textAlign: 'center' }}
-                              onClick={() => onNavigate('recompensas')}
-                          >
-                            Ver recompensas →
-                          </button>
-                        </div>
-                      </div>
+                    <div className="d3">
+                      <NivelBadge nivel={nivelActual} puntos={puntosActuales} />
+                      <button
+                          className="db-btn-ghost"
+                          style={{ width: '100%', textAlign: 'center', marginTop: '10px' }}
+                          onClick={() => onNavigate('recompensas')}
+                      >
+                        Ver recompensas →
+                      </button>
                     </div>
 
                     {/* Perfil */}
