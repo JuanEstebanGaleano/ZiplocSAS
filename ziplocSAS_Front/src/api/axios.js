@@ -2,10 +2,8 @@ import axios from 'axios';
 import { AUTH_ENDPOINTS } from '../auth/authConfig';
 import { clearAuthSession, getAccessToken, getRefreshToken, normalizeAuthSessionPayload, setAuthSession, decodeJwtPayload } from '../auth/authStorage';
 
-// Vite exposes env vars on `import.meta.env` in the browser.
 const API_BASE = import.meta.env.VITE_API_URL || import.meta.env.REACT_APP_API_URL || 'http://localhost:8080/api';
 
-// Demo fallback data
 const DEMO_USER_ID = 1;
 const DEMO_USER = {
   id: DEMO_USER_ID,
@@ -36,6 +34,13 @@ const DEMO_TRANSACCIONES = {
     { id: 202, tipo: 'EGRESO', monto: 8200, descripcion: 'Transporte', fecha: '2026-05-15T11:05:00.000Z' },
   ],
 };
+
+// Demo notificaciones
+const DEMO_NOTIFICACIONES = [
+  { id: 1, usuarioId: DEMO_USER_ID, titulo: 'Bienvenido a ZiplocSAS', mensaje: 'Tu cuenta ha sido activada exitosamente.', tipo: 'bienvenida', leida: false, fecha: '2026-05-15T08:00:00.000Z' },
+  { id: 2, usuarioId: DEMO_USER_ID, titulo: 'Pago recibido', mensaje: 'Se acreditaron $120.000 en tu billetera principal.', tipo: 'pago', leida: false, fecha: '2026-05-14T16:21:00.000Z' },
+  { id: 3, usuarioId: DEMO_USER_ID, titulo: 'Nivel Oro alcanzado', mensaje: 'Felicitaciones, alcanzaste el nivel Oro.', tipo: 'recompensa', leida: true, fecha: '2026-05-13T10:00:00.000Z' },
+];
 
 function isDemoSession() {
   const token = getAccessToken();
@@ -72,6 +77,7 @@ function buildDemoFallback(path) {
     return { usuarioId: DEMO_USER_ID, puntos: DEMO_USER.puntos, puntosAcumulados: DEMO_USER.puntos, nivel: DEMO_USER.nivel };
   }
   if (/^\/recompensas\/\d+\/nivel$/.test(path)) {
+    // ✅ FIX: campos completos y consistentes para que Dashboard los lea correctamente
     return { usuarioId: DEMO_USER_ID, nivel: DEMO_USER.nivel, puntosActuales: DEMO_USER.puntos, umbralSiguiente: 1500 };
   }
   if (/^\/recompensas\/beneficios$/.test(path)) {
@@ -81,6 +87,16 @@ function buildDemoFallback(path) {
         { id: '2', descripcion: 'Recibe bonificación directa sobre tu billetera.', nivelRequerido: 'Plata', puntosNecesarios: 180, tipo: 'bonificacion_saldo', activo: true },
       ],
     };
+  }
+  // ✅ FIX: fallback para notificaciones
+  if (/^\/notificaciones\/\d+$/.test(path)) {
+    return { notificaciones: DEMO_NOTIFICACIONES };
+  }
+  if (/^\/notificaciones\/\d+\/\d+\/leer$/.test(path)) {
+    return { ok: true };
+  }
+  if (/^\/notificaciones\/\d+\/despachar$/.test(path)) {
+    return { ok: true };
   }
   if (/^\/analitica\//.test(path)) {
     return { data: [], total: 0 };
@@ -106,62 +122,61 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor to unwrap ApiResponse<T>
 apiClient.interceptors.response.use(
-  (response) => {
-    // If backend uses ApiResponse wrapper, prefer returning data.data
-    const payload = response.data;
-    if (payload && typeof payload === 'object' && 'success' in payload && 'data' in payload) {
-      if (!payload.success) {
-        const err = new Error(payload.message || 'Error from API');
-        err.status = response.status;
-        err.data = payload;
+    (response) => {
+      // Desenvuelve ApiResponse<T> si el backend usa ese wrapper
+      const payload = response.data;
+      if (payload && typeof payload === 'object' && 'success' in payload && 'data' in payload) {
+        if (!payload.success) {
+          const err = new Error(payload.message || 'Error from API');
+          err.status = response.status;
+          err.data = payload;
+          throw err;
+        }
+        return payload.data;
+      }
+      return response.data;
+    },
+    async (error) => {
+      // ✅ FIX PRINCIPAL: devolver fallback directamente, sin envolver en { data: fallback }
+      // Antes: return { data: fallback } → los hooks recibían un objeto con capa extra
+      // Ahora: return fallback → igual que el interceptor de éxito
+      if (error.response?.status === 404 && isDemoSession()) {
+        const fallback = buildDemoFallback(error.config?.url || '');
+        if (fallback !== null) {
+          return fallback;
+        }
+      }
+
+      const originalRequest = error.config || {};
+
+      if (error.response?.status === 401 && !originalRequest.skipAuthRefresh) {
+        clearAuthSession();
+        const authError = new Error('Sesión inválida o expirada');
+        authError.status = 401;
+        authError.isAuthError = true;
+        throw authError;
+      }
+
+      if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK' || !error.response) {
+        const err = new Error('Backend server is unavailable. Please check if the server is running at ' + API_BASE);
+        err.status = 0;
+        err.isConnectionError = true;
         throw err;
       }
-      return payload.data;
-    }
-    return response.data;
-  },
-  async (error) => {
-    // Check for demo mode fallback on 404
-    if (error.response?.status === 404 && isDemoSession()) {
-      const fallback = buildDemoFallback(error.config?.url || '');
-      if (fallback !== null) {
-        return { data: fallback };
+
+      const serverMessage = error.response?.data?.message
+          || error.response?.data?.error
+          || error.response?.data?.detail
+          || error.message
+          || 'Network error';
+      const err = new Error(serverMessage);
+      if (error.response) {
+        err.status = error.response.status;
+        err.data = error.response.data;
       }
-    }
-
-    const originalRequest = error.config || {};
-
-    if (error.response?.status === 401 && !originalRequest.skipAuthRefresh) {
-      clearAuthSession();
-      const authError = new Error('Sesión inválida o expirada');
-      authError.status = 401;
-      authError.isAuthError = true;
-      throw authError;
-    }
-
-    // Handle network errors
-    if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK' || !error.response) {
-      const err = new Error('Backend server is unavailable. Please check if the server is running at ' + API_BASE);
-      err.status = 0;
-      err.isConnectionError = true;
       throw err;
     }
-    
-    // Normalize axios error
-    const serverMessage = error.response?.data?.message
-      || error.response?.data?.error
-      || error.response?.data?.detail
-      || error.message
-      || 'Network error';
-    const err = new Error(serverMessage);
-    if (error.response) {
-      err.status = error.response.status;
-      err.data = error.response.data;
-    }
-    throw err;
-  }
 );
 
 export { API_BASE };
