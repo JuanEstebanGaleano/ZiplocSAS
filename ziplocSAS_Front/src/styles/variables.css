@@ -1,0 +1,31 @@
+:root {
+  --color-bg: #000000;
+  --color-panel: #06061D;
+  --color-surface: #101046;
+  --color-accent: #191970;
+  --color-border: #2C2CC3;
+  --color-text-secondary: #4B4BD7;
+  --color-text-primary: #FFFFFF;
+  --color-error: #B13E3E;
+  --font-family: 'Inter', sans-serif;
+  --font-size-label: 12px;
+  --font-size-body: 14px;
+  --font-size-heading: 18px;
+  --font-size-title: 24px;
+  --font-size-value: 32px;
+  --font-size-value-lg: 48px;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --spacing-xs: 8px;
+  --spacing-sm: 16px;
+  --spacing-md: 24px;
+  --spacing-lg: 32px;
+  --spacing-xl: 48px;
+  --transition-fast: 120ms linear;
+  --transition-base: 150ms ease;
+  --transition-slow: 180ms ease;
+  --shadow-card-hover: 0 4px 20px rgba(75, 75, 215, 0.14);
+  --shadow-input-focus: 0 0 0 3px rgba(75, 75, 215, 0.18);
+}

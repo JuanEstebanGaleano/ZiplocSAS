@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: ziplocsas-wallet
+  data:
+    mongodb:
+      auto-index-creation: true
+    uri: mongodb://localhost:27017/ziplocsas_wallet
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+logging:
+  level:
+    root: INFO
+    com.example.proyecto_final: DEBUG
+
+app:
+  programadas:
+    procesador:
+      enabled: true
+      intervalo-ms: 60000
+      retraso-inicial-ms: 10000
