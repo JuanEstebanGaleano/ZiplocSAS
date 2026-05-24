@@ -5,7 +5,7 @@ import TransaccionItem from '../components/TransaccionItem';
 import { useBilleteras } from '../hooks/useBilleteras';
 import { useTransacciones } from '../hooks/useTransacciones';
 import { usePuntosRecompensas, useNivelRecompensas } from '../hooks/useRecompensas';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { obtenerUsuarioPorId } from '../services/api';
 
 const moneyFormatter = new Intl.NumberFormat('es-CO', {
@@ -16,22 +16,89 @@ const moneyFormatter = new Intl.NumberFormat('es-CO', {
 const dateFormatter = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' });
 
 function sortByRecentDate(items) {
-  return [...items].sort((left, right) => {
-    const leftDate = left.fecha ? new Date(left.fecha).getTime() : 0;
-    const rightDate = right.fecha ? new Date(right.fecha).getTime() : 0;
-    return rightDate - leftDate;
+  return [...items].sort((a, b) => {
+    const aDate = a.fecha ? new Date(a.fecha).getTime() : 0;
+    const bDate = b.fecha ? new Date(b.fecha).getTime() : 0;
+    return bDate - aDate;
   });
 }
 
+/* ── Contador animado ─────────────────────────────────── */
+function AnimatedNumber({ value, prefix = '', suffix = '', duration = 1200 }) {
+  const [display, setDisplay] = useState(0);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    const start = Date.now();
+    const from = 0;
+    const to = Number(value) || 0;
+    function tick() {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(from + (to - from) * ease));
+      if (progress < 1) rafRef.current = requestAnimationFrame(tick);
+    }
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [value, duration]);
+
+  return <>{prefix}{moneyFormatter.format(display)}{suffix}</>;
+}
+
+/* ── Barra de progreso animada ───────────────────────── */
+function ProgressArc({ value, max, size = 88 }) {
+  const pct = max > 0 ? Math.min(1, value / max) : 1;
+  const r = (size - 10) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = circ * pct;
+  const cx = size / 2, cy = size / 2;
+
+  return (
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,255,136,0.08)" strokeWidth={5} />
+        <circle
+            cx={cx} cy={cy} r={r} fill="none"
+            stroke="url(#arcGrad)" strokeWidth={5}
+            strokeDasharray={`${dash} ${circ - dash}`}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.4,0,0.2,1)' }}
+        />
+        <defs>
+          <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#00ff88" />
+            <stop offset="100%" stopColor="#00cfff" />
+          </linearGradient>
+        </defs>
+      </svg>
+  );
+}
+
+/* ── Ticker de estado ────────────────────────────────── */
+function StatusTicker({ label, value, up = true }) {
+  return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ fontSize: '0.6rem', color: 'rgba(0,255,136,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>{label}</span>
+        <span style={{ fontSize: '0.82rem', fontFamily: 'var(--font-mono)', color: up ? '#00ff88' : '#ff4466', fontWeight: 600 }}>
+        {up ? '▲' : '▼'} {value}
+      </span>
+      </div>
+  );
+}
+
+/* ── Main ────────────────────────────────────────────── */
 export default function Dashboard({ userId, onNavigate }) {
   const [usuario, setUsuario] = useState(null);
   const [usuarioError, setUsuarioError] = useState(null);
+  const [tick, setTick] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
-  const billeterasQuery = useBilleteras(userId);
-  const puntosQuery = usePuntosRecompensas(userId);
-  const nivelQuery = useNivelRecompensas(userId);
+  const billeterasQuery     = useBilleteras(userId);
+  const puntosQuery         = usePuntosRecompensas(userId);
+  const nivelQuery          = useNivelRecompensas(userId);
 
   useEffect(() => {
+    setMounted(true);
     let active = true;
     async function loadUsuario() {
       try {
@@ -42,625 +109,866 @@ export default function Dashboard({ userId, onNavigate }) {
       }
     }
     loadUsuario();
-    return () => { active = false; };
+    // Pulso del clock
+    const interval = setInterval(() => setTick(t => t + 1), 1000);
+    return () => { active = false; clearInterval(interval); };
   }, [userId]);
 
-  const billeteras = billeterasQuery.data?.billeteras || billeterasQuery.data || [];
-  const firstWalletId = billeteras.length > 0 ? billeteras[0].id : null;
+  const billeteras     = billeterasQuery.data?.billeteras || billeterasQuery.data || [];
+  const firstWalletId  = billeteras.length > 0 ? billeteras[0].id : null;
   const transaccionesQuery = useTransacciones(firstWalletId);
-  const transaccionesData = transaccionesQuery.data?.transacciones || transaccionesQuery.data || [];
-  const transacciones = sortByRecentDate(transaccionesData).slice(0, 5);
+  const transaccionesData  = transaccionesQuery.data?.transacciones || transaccionesQuery.data || [];
+  const transacciones      = sortByRecentDate(transaccionesData).slice(0, 5);
 
-  const puntosData = puntosQuery.data || {};
-  const nivelData = nivelQuery.data || {};
-  const puntosActuales = Number(nivelData.puntosActuales ?? puntosData.puntos ?? puntosData.puntosAcumulados ?? 0);
-  const nivelActual = nivelData.nivel || puntosData.nivel || usuario?.nivel || 'Bronce';
-  const umbralSiguiente = Number(nivelData.umbralSiguiente ?? 0);
-  const progreso = umbralSiguiente > 0 ? Math.min(100, Math.round((puntosActuales / umbralSiguiente) * 100)) : 100;
+  const puntosData       = puntosQuery.data || {};
+  const nivelData        = nivelQuery.data || {};
+  const puntosActuales   = Number(nivelData.puntosActuales ?? puntosData.puntos ?? puntosData.puntosAcumulados ?? 0);
+  const nivelActual      = nivelData.nivel || puntosData.nivel || usuario?.nivel || 'Bronce';
+  const umbralSiguiente  = Number(nivelData.umbralSiguiente ?? 0);
+  const progreso         = umbralSiguiente > 0 ? Math.min(100, Math.round((puntosActuales / umbralSiguiente) * 100)) : 100;
 
-  const isLoading = billeterasQuery.isLoading || puntosQuery.isLoading || nivelQuery.isLoading;
-  const error = billeterasQuery.error || puntosQuery.error || nivelQuery.error || usuarioError;
-  const totalSaldo = billeteras.reduce((sum, wallet) => sum + Number(wallet.saldo || 0), 0);
+  const isLoading  = billeterasQuery.isLoading || puntosQuery.isLoading || nivelQuery.isLoading;
+  const error      = billeterasQuery.error || puntosQuery.error || nivelQuery.error || usuarioError;
+  const totalSaldo = billeteras.reduce((sum, w) => sum + Number(w.saldo || 0), 0);
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   return (
       <>
         <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500&display=swap');
+
+        :root {
+          --font-mono: 'Space Mono', monospace;
+          --font-display: 'Orbitron', sans-serif;
+          --font-body: 'Inter', sans-serif;
+          --green: #00ff88;
+          --green-dim: rgba(0,255,136,0.55);
+          --green-muted: rgba(0,255,136,0.12);
+          --green-border: rgba(0,255,136,0.18);
+          --cyan: #00cfff;
+          --cyan-dim: rgba(0,207,255,0.5);
+          --red: #ff3355;
+          --amber: #ffb020;
+          --bg: #060609;
+          --surface: rgba(255,255,255,0.028);
+          --surface-hover: rgba(0,255,136,0.04);
+          --border: rgba(255,255,255,0.055);
+          --border-accent: rgba(0,255,136,0.22);
+          --text: rgba(255,255,255,0.88);
+          --text-dim: rgba(255,255,255,0.38);
+          --text-faint: rgba(255,255,255,0.15);
+        }
 
         .db-root {
-          font-family: 'DM Sans', sans-serif;
+          font-family: var(--font-body);
           min-height: 100vh;
-          background: #0a0a0f;
+          background: var(--bg);
           position: relative;
-          padding: 2rem 1.5rem 4rem;
+          overflow-x: hidden;
         }
 
-        /* Fondo atmosférico */
-        .db-bg {
-          position: fixed;
-          inset: 0;
-          z-index: 0;
-          pointer-events: none;
+        /* ── Atmospheric bg ── */
+        .db-atmo {
+          position: fixed; inset: 0; z-index: 0; pointer-events: none;
           background:
-            radial-gradient(ellipse 70% 50% at 10% 0%, rgba(99,88,255,0.14) 0%, transparent 60%),
-            radial-gradient(ellipse 50% 40% at 90% 100%, rgba(34,211,165,0.10) 0%, transparent 55%),
-            #0a0a0f;
+            radial-gradient(ellipse 60% 55% at -5% 5%, rgba(0,255,136,0.07) 0%, transparent 60%),
+            radial-gradient(ellipse 45% 40% at 105% 95%, rgba(0,207,255,0.06) 0%, transparent 55%),
+            radial-gradient(ellipse 30% 30% at 50% 50%, rgba(0,255,136,0.025) 0%, transparent 70%);
         }
 
-        .db-grid {
-          position: fixed;
-          inset: 0;
-          z-index: 0;
-          pointer-events: none;
-          background-image:
-            linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
-          background-size: 48px 48px;
-          mask-image: radial-gradient(ellipse 80% 80% at 50% 20%, black 20%, transparent 100%);
+        /* Scanlines */
+        .db-scan {
+          position: fixed; inset: 0; z-index: 0; pointer-events: none;
+          background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(0,0,0,0.18) 2px,
+            rgba(0,0,0,0.18) 4px
+          );
+          opacity: 0.35;
+        }
+
+        /* Noise overlay */
+        .db-noise {
+          position: fixed; inset: 0; z-index: 0; pointer-events: none;
+          opacity: 0.025;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+          background-repeat: repeat;
+          background-size: 128px;
         }
 
         .db-content {
           position: relative;
           z-index: 1;
-          max-width: 1280px;
+          max-width: 1400px;
           margin: 0 auto;
+          padding: 0 1.5rem 4rem;
         }
 
-        /* ── Topbar ── */
-        .db-topbar {
+        /* ── Header ── */
+        .db-header {
           display: flex;
-          align-items: center;
+          align-items: stretch;
           justify-content: space-between;
-          margin-bottom: 2.5rem;
+          border-bottom: 1px solid var(--border-accent);
+          padding: 1rem 0;
+          margin-bottom: 2rem;
           gap: 1rem;
           flex-wrap: wrap;
         }
 
-        .db-brand {
+        .db-header-left {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
+          gap: 1.25rem;
         }
 
-        .db-logo {
-          width: 38px;
-          height: 38px;
-          border-radius: 9px;
-          object-fit: cover;
-          box-shadow: 0 2px 12px rgba(99,88,255,0.35);
+        .db-logo-mark {
+          width: 36px; height: 36px;
+          border: 1.5px solid var(--green-border);
+          border-radius: 6px;
+          display: flex; align-items: center; justify-content: center;
+          background: var(--green-muted);
+          position: relative;
+          overflow: hidden;
         }
 
-        .db-brand-name {
-          font-family: 'Syne', sans-serif;
-          font-weight: 800;
-          font-size: 1.15rem;
-          color: #fff;
-          letter-spacing: -0.03em;
+        .db-logo-mark::after {
+          content: '';
+          position: absolute;
+          inset: -50%;
+          background: conic-gradient(from 0deg, transparent 70%, rgba(0,255,136,0.3) 100%);
+          animation: spin 4s linear infinite;
         }
 
-        .db-greeting {
-          text-align: right;
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .db-logo-inner {
+          width: 14px; height: 14px;
+          background: var(--green);
+          clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+          z-index: 1;
         }
 
-        .db-greeting-name {
-          font-family: 'Syne', sans-serif;
+        .db-brand-text {
+          display: flex; flex-direction: column; gap: 1px;
+        }
+
+        .db-brand-main {
+          font-family: var(--font-display);
+          font-size: 0.75rem;
           font-weight: 700;
-          font-size: 1rem;
-          color: #fff;
-          letter-spacing: -0.02em;
-        }
-
-        .db-greeting-sub {
-          font-size: 0.72rem;
-          color: rgba(255,255,255,0.35);
+          color: var(--green);
+          letter-spacing: 0.15em;
           text-transform: uppercase;
-          letter-spacing: 0.07em;
         }
 
-        /* ── Grid principal ── */
-        .db-grid-layout {
+        .db-brand-sub {
+          font-family: var(--font-mono);
+          font-size: 0.58rem;
+          color: var(--text-faint);
+          letter-spacing: 0.08em;
+        }
+
+        .db-header-tickers {
+          display: flex;
+          align-items: center;
+          gap: 2rem;
+        }
+
+        .db-header-right {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+        }
+
+        .db-clock {
+          font-family: var(--font-mono);
+          font-size: 0.8rem;
+          color: var(--green-dim);
+          letter-spacing: 0.06em;
+          display: flex; flex-direction: column; align-items: flex-end;
+        }
+
+        .db-clock-date {
+          font-size: 0.58rem;
+          color: var(--text-faint);
+          margin-top: 2px;
+        }
+
+        .db-user-chip {
+          display: flex; align-items: center; gap: 0.6rem;
+          padding: 0.4rem 0.9rem 0.4rem 0.5rem;
+          border: 1px solid var(--border);
+          border-radius: 999px;
+          background: var(--surface);
+          cursor: default;
+        }
+
+        .db-user-avatar {
+          width: 24px; height: 24px; border-radius: 50%;
+          background: linear-gradient(135deg, var(--green-muted), rgba(0,207,255,0.1));
+          border: 1px solid var(--green-border);
+          display: flex; align-items: center; justify-content: center;
+          font-family: var(--font-mono);
+          font-size: 0.65rem;
+          color: var(--green);
+          font-weight: 700;
+        }
+
+        .db-user-name {
+          font-size: 0.78rem;
+          color: var(--text-dim);
+          font-weight: 500;
+        }
+
+        /* ── Main layout ── */
+        .db-layout {
           display: grid;
           grid-template-columns: 1fr;
           gap: 1.25rem;
         }
 
-        @media (min-width: 1024px) {
-          .db-grid-layout {
-            grid-template-columns: 1fr 1fr 1fr;
+        @media (min-width: 1100px) {
+          .db-layout {
+            grid-template-columns: 1fr 1fr 340px;
           }
         }
 
-        .span-2 { grid-column: span 1; }
-        .span-1 { grid-column: span 1; }
-        .span-full { grid-column: span 1; }
-
-        @media (min-width: 1024px) {
-          .span-2 { grid-column: span 2; }
-          .span-full { grid-column: span 3; }
+        /* ── Hero metric strip ── */
+        .db-metrics {
+          grid-column: 1 / -1;
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1px;
+          border: 1px solid var(--border-accent);
+          border-radius: 12px;
+          overflow: hidden;
+          background: var(--border-accent);
         }
 
-        /* ── Card base ── */
-        .db-card {
-          background: rgba(255,255,255,0.035);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 16px;
-          padding: 1.75rem;
-          backdrop-filter: blur(12px);
-          animation: cardIn 0.4s ease both;
+        .db-metric {
+          background: var(--bg);
+          padding: 1.4rem 1.75rem;
+          display: flex; flex-direction: column; gap: 0.5rem;
+          position: relative;
+          overflow: hidden;
+          transition: background 0.2s;
         }
 
-        @keyframes cardIn {
-          from { opacity: 0; transform: translateY(12px); }
+        .db-metric:hover { background: rgba(0,255,136,0.025); }
+
+        .db-metric::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, var(--green), transparent);
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+
+        .db-metric:hover::before { opacity: 1; }
+
+        .db-metric-label {
+          font-family: var(--font-mono);
+          font-size: 0.6rem;
+          color: var(--text-faint);
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+        }
+
+        .db-metric-value {
+          font-family: var(--font-display);
+          font-weight: 700;
+          font-size: 1.75rem;
+          color: #fff;
+          letter-spacing: -0.02em;
+          line-height: 1;
+        }
+
+        .db-metric-value.accent { color: var(--green); }
+
+        .db-metric-sub {
+          font-family: var(--font-mono);
+          font-size: 0.62rem;
+          color: var(--text-faint);
+          display: flex; align-items: center; gap: 0.4rem;
+        }
+
+        .db-metric-dot {
+          width: 5px; height: 5px; border-radius: 50%;
+          background: var(--green);
+          animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.7); }
+        }
+
+        /* ── Panel base ── */
+        .db-panel {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          overflow: hidden;
+          display: flex; flex-direction: column;
+          animation: fadeUp 0.5s ease both;
+        }
+
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
         }
 
-        .db-card-title {
-          font-family: 'Syne', sans-serif;
-          font-weight: 700;
-          font-size: 0.95rem;
-          color: #fff;
-          letter-spacing: -0.02em;
+        .db-panel.accent-border {
+          border-color: var(--border-accent);
         }
 
-        .db-card-label {
-          font-size: 0.68rem;
-          color: rgba(255,255,255,0.3);
+        .db-panel-head {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 1rem 1.25rem;
+          border-bottom: 1px solid var(--border);
+          gap: 0.75rem;
+        }
+
+        .db-panel-title {
+          font-family: var(--font-mono);
+          font-size: 0.65rem;
           text-transform: uppercase;
-          letter-spacing: 0.09em;
+          letter-spacing: 0.12em;
+          color: var(--green-dim);
+          display: flex; align-items: center; gap: 0.5rem;
         }
 
-        .db-card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1.5rem;
-          flex-wrap: wrap;
-          gap: 0.5rem;
+        .db-panel-title::before {
+          content: '//';
+          color: var(--text-faint);
+          font-weight: 400;
         }
 
-        /* ── Stat cards hero ── */
-        .db-stats-row {
+        .db-panel-badge {
+          font-family: var(--font-mono);
+          font-size: 0.58rem;
+          color: var(--text-faint);
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          padding: 0.2rem 0.6rem;
+          border: 1px solid var(--border);
+          border-radius: 4px;
+        }
+
+        .db-panel-body { padding: 1.25rem; flex: 1; }
+
+        /* ── Wallet table ── */
+        .db-wtable-head {
           display: grid;
-          grid-template-columns: 1fr;
+          grid-template-columns: 1fr auto auto auto;
           gap: 1rem;
-          margin-bottom: 1.75rem;
+          padding: 0 0.5rem 0.6rem;
+          font-family: var(--font-mono);
+          font-size: 0.58rem;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: var(--text-faint);
+          border-bottom: 1px solid var(--border);
+          margin-bottom: 0.25rem;
         }
 
-        @media (min-width: 600px) {
-          .db-stats-row { grid-template-columns: repeat(3, 1fr); }
+        .db-wrow {
+          display: grid;
+          grid-template-columns: 1fr auto auto auto;
+          gap: 1rem;
+          align-items: center;
+          padding: 0.85rem 0.5rem;
+          border-bottom: 1px solid rgba(255,255,255,0.035);
+          transition: background 0.15s;
+          cursor: default;
         }
 
-        .db-stat {
-          border-radius: 12px;
-          padding: 1.25rem 1.4rem;
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-          animation: cardIn 0.4s ease both;
+        .db-wrow:last-child { border-bottom: none; }
+        .db-wrow:hover { background: var(--surface-hover); border-radius: 8px; }
+
+        .db-wrow-name {
+          font-size: 0.82rem;
+          color: var(--text);
+          font-weight: 500;
+          display: flex; flex-direction: column; gap: 2px;
         }
 
-        .db-stat-hero {
-          background: linear-gradient(135deg, rgba(99,88,255,0.25) 0%, rgba(34,211,165,0.15) 100%);
-          border: 1px solid rgba(99,88,255,0.3);
-          box-shadow: 0 4px 24px rgba(99,88,255,0.2);
-        }
-
-        .db-stat-plain {
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.07);
-        }
-
-        .db-stat-value-hero {
-          font-family: 'Syne', sans-serif;
-          font-weight: 800;
-          font-size: 1.9rem;
-          color: #fff;
-          letter-spacing: -0.04em;
-          line-height: 1;
-        }
-
-        .db-stat-value {
-          font-family: 'Syne', sans-serif;
-          font-weight: 700;
-          font-size: 1.5rem;
-          color: #fff;
-          letter-spacing: -0.03em;
-          line-height: 1;
-        }
-
-        .db-stat-label {
-          font-size: 0.7rem;
-          color: rgba(255,255,255,0.4);
+        .db-wrow-tipo {
+          font-family: var(--font-mono);
+          font-size: 0.6rem;
+          color: var(--text-faint);
           text-transform: uppercase;
           letter-spacing: 0.08em;
         }
 
-        /* ── Tabla encabezados ── */
-        .db-table-head {
-          display: grid;
-          padding-bottom: 0.75rem;
-          margin-bottom: 0.5rem;
-          border-bottom: 1px solid rgba(255,255,255,0.07);
-          font-size: 0.65rem;
-          text-transform: uppercase;
-          letter-spacing: 0.09em;
-          color: rgba(255,255,255,0.3);
-          font-weight: 600;
-        }
-
-        .db-table-head-billeteras {
-          grid-template-columns: 1fr 1fr 1fr auto;
-          gap: 1rem;
-        }
-
-        .db-table-head-tx {
-          grid-template-columns: 1fr 1fr 1fr 1fr auto;
-          gap: 1rem;
-        }
-
-        /* ── Fila billetera ── */
-        .db-wallet-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr auto;
-          gap: 1rem;
-          align-items: center;
-          padding: 1rem 0.75rem;
-          margin: 0 -0.75rem;
-          border-radius: 10px;
-          border-bottom: 1px solid rgba(255,255,255,0.05);
-          transition: background 0.18s;
-        }
-
-        .db-wallet-row:last-child { border-bottom: none; }
-
-        .db-wallet-row:hover {
-          background: rgba(99,88,255,0.07);
-        }
-
-        .db-wallet-name {
-          font-weight: 500;
-          color: #fff;
-          font-size: 0.9rem;
-        }
-
-        .db-wallet-tipo {
-          font-size: 0.8rem;
-          color: rgba(255,255,255,0.4);
-        }
-
-        .db-wallet-saldo {
-          font-family: 'Syne', sans-serif;
+        .db-wrow-saldo {
+          font-family: var(--font-mono);
+          font-size: 0.82rem;
+          color: var(--green);
           font-weight: 700;
-          font-size: 0.95rem;
-          color: #fff;
-          letter-spacing: -0.02em;
-        }
-
-        /* ── Botones ── */
-        .btn-link {
-          background: none;
-          border: none;
-          color: #a89eff;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 0.8rem;
-          font-weight: 500;
-          cursor: pointer;
-          padding: 0;
-          transition: color 0.2s;
-        }
-
-        .btn-link:hover { color: #fff; }
-
-        .btn-outline {
-          background: none;
-          border: 1px solid rgba(255,255,255,0.12);
-          color: rgba(255,255,255,0.55);
-          font-family: 'DM Sans', sans-serif;
-          font-size: 0.75rem;
-          font-weight: 500;
-          padding: 0.35rem 0.9rem;
-          border-radius: 7px;
-          cursor: pointer;
-          transition: background 0.18s, color 0.18s, border-color 0.18s;
           white-space: nowrap;
         }
 
-        .btn-outline:hover {
-          background: rgba(99,88,255,0.15);
-          border-color: rgba(99,88,255,0.4);
-          color: #a89eff;
+        /* ── TX rows ── */
+        .db-tx-head {
+          display: grid;
+          grid-template-columns: 1fr auto auto;
+          gap: 1rem;
+          padding: 0 0.5rem 0.6rem;
+          font-family: var(--font-mono);
+          font-size: 0.58rem;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: var(--text-faint);
+          border-bottom: 1px solid var(--border);
+          margin-bottom: 0.25rem;
         }
 
-        /* ── Nivel / progreso ── */
-        .db-nivel-section { display: flex; flex-direction: column; gap: 1rem; }
-
-        .db-progreso-text {
-          font-size: 0.78rem;
-          color: rgba(255,255,255,0.35);
+        .db-tx-row {
+          display: grid;
+          grid-template-columns: 1fr auto auto;
+          gap: 1rem;
+          align-items: center;
+          padding: 0.85rem 0.5rem;
+          border-bottom: 1px solid rgba(255,255,255,0.035);
+          transition: background 0.15s;
         }
 
-        .db-progreso-bar-bg {
-          width: 100%;
-          height: 4px;
-          background: rgba(255,255,255,0.08);
+        .db-tx-row:last-child { border-bottom: none; }
+        .db-tx-row:hover { background: var(--surface-hover); border-radius: 8px; }
+
+        .db-tx-tipo {
+          font-size: 0.8rem;
+          color: var(--text);
+          font-weight: 500;
+          display: flex; flex-direction: column; gap: 2px;
+        }
+
+        .db-tx-fecha {
+          font-family: var(--font-mono);
+          font-size: 0.6rem;
+          color: var(--text-faint);
+        }
+
+        .db-tx-monto {
+          font-family: var(--font-mono);
+          font-size: 0.82rem;
+          font-weight: 700;
+          color: var(--cyan);
+          white-space: nowrap;
+        }
+
+        .db-tx-estado {
+          font-family: var(--font-mono);
+          font-size: 0.6rem;
+          padding: 0.15rem 0.5rem;
+          border-radius: 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          white-space: nowrap;
+        }
+
+        .estado-completada { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+        .estado-pendiente  { background: rgba(255,176,32,0.1);  color: var(--amber);  border: 1px solid rgba(255,176,32,0.2); }
+        .estado-fallida    { background: rgba(255,51,85,0.1);   color: var(--red);    border: 1px solid rgba(255,51,85,0.2); }
+        .estado-default    { background: rgba(255,255,255,0.05); color: var(--text-dim); border: 1px solid var(--border); }
+
+        /* ── Nivel card ── */
+        .db-nivel-arc {
+          display: flex;
+          align-items: center;
+          gap: 1.25rem;
+          margin-bottom: 1.25rem;
+        }
+
+        .db-nivel-arc-text {
+          display: flex; flex-direction: column; gap: 0.3rem;
+        }
+
+        .db-nivel-name {
+          font-family: var(--font-display);
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: var(--green);
+          letter-spacing: 0.04em;
+        }
+
+        .db-nivel-pts {
+          font-family: var(--font-mono);
+          font-size: 0.65rem;
+          color: var(--text-faint);
+        }
+
+        .db-progress-bar-wrap {
+          margin-top: 0.5rem;
+          display: flex; flex-direction: column; gap: 0.5rem;
+        }
+
+        .db-progress-bar-track {
+          height: 3px;
+          background: rgba(255,255,255,0.06);
           border-radius: 999px;
           overflow: hidden;
         }
 
-        .db-progreso-bar {
+        .db-progress-bar-fill {
           height: 100%;
           border-radius: 999px;
-          background: linear-gradient(90deg, #6358ff, #22d3a5);
-          transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+          background: linear-gradient(90deg, var(--green), var(--cyan));
+          transition: width 1s cubic-bezier(0.4,0,0.2,1);
         }
 
-        /* ── Perfil ── */
+        .db-progress-label {
+          font-family: var(--font-mono);
+          font-size: 0.6rem;
+          color: var(--text-faint);
+          display: flex; justify-content: space-between;
+        }
+
+        /* ── Perfil field ── */
         .db-perfil-grid {
           display: grid;
-          grid-template-columns: 1fr;
-          gap: 1.5rem;
+          grid-template-columns: 1fr 1fr;
+          gap: 1rem 1.25rem;
         }
 
-        @media (min-width: 600px) {
-          .db-perfil-grid { grid-template-columns: 1fr 1fr; }
-        }
+        .db-field { display: flex; flex-direction: column; gap: 0.25rem; }
 
-        .db-perfil-field { display: flex; flex-direction: column; gap: 0.25rem; }
-
-        .db-perfil-field-label {
-          font-size: 0.65rem;
+        .db-field-label {
+          font-family: var(--font-mono);
+          font-size: 0.58rem;
           text-transform: uppercase;
-          letter-spacing: 0.09em;
-          color: rgba(255,255,255,0.3);
+          letter-spacing: 0.1em;
+          color: var(--text-faint);
         }
 
-        .db-perfil-field-value {
-          font-size: 0.9rem;
-          color: #fff;
+        .db-field-value {
+          font-size: 0.82rem;
+          color: var(--text);
           font-weight: 400;
+          word-break: break-all;
         }
 
-        .db-nivel-pill {
-          display: inline-flex;
-          align-items: center;
-          padding: 0.25rem 0.75rem;
-          border-radius: 999px;
-          background: rgba(99,88,255,0.12);
-          border: 1px solid rgba(99,88,255,0.25);
-          color: #a89eff;
-          font-size: 0.75rem;
-          font-weight: 600;
-          letter-spacing: 0.03em;
-          margin-top: 0.2rem;
-        }
-
-        /* ── Estado vacío ── */
+        /* ── Empty state ── */
         .db-empty {
-          border: 1px dashed rgba(255,255,255,0.1);
-          border-radius: 10px;
+          border: 1px dashed rgba(0,255,136,0.12);
+          border-radius: 8px;
           padding: 1.25rem;
-          background: rgba(255,255,255,0.02);
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
+          background: rgba(0,255,136,0.018);
         }
 
         .db-empty p {
-          font-size: 0.82rem;
-          color: rgba(255,255,255,0.3);
+          font-family: var(--font-mono);
+          font-size: 0.72rem;
+          color: var(--text-faint);
+          margin-bottom: 0.75rem;
         }
 
-        /* ── Divider ── */
-        .db-divider {
-          border: none;
-          border-top: 1px solid rgba(255,255,255,0.06);
-          margin: 1.25rem 0;
+        .db-btn-ghost {
+          background: none;
+          border: 1px solid var(--green-border);
+          color: var(--green-dim);
+          font-family: var(--font-mono);
+          font-size: 0.68rem;
+          padding: 0.35rem 0.85rem;
+          border-radius: 5px;
+          cursor: pointer;
+          letter-spacing: 0.06em;
+          transition: background 0.15s, color 0.15s;
+          text-transform: uppercase;
         }
 
-        /* Delays escalonados para cards */
-        .delay-1 { animation-delay: 0.05s; }
-        .delay-2 { animation-delay: 0.10s; }
-        .delay-3 { animation-delay: 0.15s; }
-        .delay-4 { animation-delay: 0.20s; }
-        .delay-5 { animation-delay: 0.25s; }
+        .db-btn-ghost:hover {
+          background: var(--green-muted);
+          color: var(--green);
+        }
+
+        .db-btn-text {
+          background: none; border: none;
+          color: var(--green-dim);
+          font-family: var(--font-mono);
+          font-size: 0.65rem;
+          cursor: pointer;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          transition: color 0.15s;
+          padding: 0;
+        }
+
+        .db-btn-text:hover { color: var(--green); }
+
+        /* animation delays */
+        .d1 { animation-delay: 0.05s; }
+        .d2 { animation-delay: 0.10s; }
+        .d3 { animation-delay: 0.15s; }
+        .d4 { animation-delay: 0.20s; }
+        .d5 { animation-delay: 0.25s; }
       `}</style>
 
-        {/* Fondo */}
-        <div className="db-bg" />
-        <div className="db-grid" />
+        {/* Atmospheric layers */}
+        <div className="db-atmo" />
+        <div className="db-scan" />
+        <div className="db-noise" />
 
         <div className="db-root">
           <div className="db-content">
 
-            {/* ── Topbar ── */}
-            <div className="db-topbar">
-              <div className="db-brand">
-                <img
-                    src="https://images.genius.com/2ac9006741241a4565391f4b145cc4dd.1000x1000x1.jpg"
-                    alt="ZiplocSAS"
-                    className="db-logo"
-                />
-                <span className="db-brand-name">ZiplocSAS</span>
+            {/* ── Header ── */}
+            <header className="db-header">
+              <div className="db-header-left">
+                <div className="db-logo-mark">
+                  <div className="db-logo-inner" />
+                </div>
+                <div className="db-brand-text">
+                  <span className="db-brand-main">ZiplocSAS</span>
+                  <span className="db-brand-sub">Financial Terminal v2.4</span>
+                </div>
               </div>
-              <div className="db-greeting">
-                <div className="db-greeting-name">{usuario?.nombre || 'Cargando...'}</div>
-                <div className="db-greeting-sub">Resumen general</div>
-              </div>
-            </div>
 
-            {/* ── Error global ── */}
+              <div className="db-header-tickers">
+                <StatusTicker label="Sistema" value="ONLINE" up={true} />
+                <StatusTicker label="Billeteras" value={billeteras.length} up={billeteras.length > 0} />
+                <StatusTicker label="Puntos" value={puntosActuales} up={puntosActuales > 0} />
+              </div>
+
+              <div className="db-header-right">
+                <div className="db-clock">
+                  <span>{timeStr}</span>
+                  <span className="db-clock-date">{now.toLocaleDateString('es-CO', { dateStyle: 'medium' })}</span>
+                </div>
+                <div className="db-user-chip">
+                  <div className="db-user-avatar">
+                    {(usuario?.nombre || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <span className="db-user-name">{usuario?.nombre || 'Cargando…'}</span>
+                </div>
+              </div>
+            </header>
+
             {error && (
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <AlertaPanel type="error" title="No se pudo cargar el panel" message={error?.message || String(error)} />
+                  <AlertaPanel type="error" title="Error de carga" message={error?.message || String(error)} />
                 </div>
             )}
 
-            {/* ── Loading ── */}
-            {isLoading && (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem 0' }}>
+            {isLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem 0' }}>
                   <LoadingSpinner />
                 </div>
-            )}
+            ) : (
+                <div className="db-layout">
 
-            {!isLoading && (
-                <div className="db-grid-layout">
+                  {/* ── Metric strip ── */}
+                  <div className="db-metrics" style={{ gridColumn: '1 / -1' }}>
+                    <div className="db-metric">
+                      <span className="db-metric-label">Saldo total consolidado</span>
+                      <span className="db-metric-value accent">
+                    $ <AnimatedNumber value={totalSaldo} />
+                  </span>
+                      <span className="db-metric-sub">
+                    <span className="db-metric-dot" />
+                        {billeteras.length} billeteras activas
+                  </span>
+                    </div>
+                    <div className="db-metric">
+                      <span className="db-metric-label">Puntos fidelización</span>
+                      <span className="db-metric-value">
+                    <AnimatedNumber value={puntosActuales} />
+                  </span>
+                      <span className="db-metric-sub">
+                    <span className="db-metric-dot" style={{ background: 'var(--cyan)' }} />
+                    Nivel {nivelActual}
+                  </span>
+                    </div>
+                    <div className="db-metric">
+                      <span className="db-metric-label">Transacciones recientes</span>
+                      <span className="db-metric-value">
+                    <AnimatedNumber value={transacciones.length} />
+                  </span>
+                      <span className="db-metric-sub">
+                    <span className="db-metric-dot" style={{ background: 'var(--amber)', animationDelay: '0.5s' }} />
+                    Últimas operaciones
+                  </span>
+                    </div>
+                  </div>
 
-                  {/* ══ Columna principal (span 2) ══ */}
-                  <div className="span-2" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
-                    {/* Card: Stats + Billeteras */}
-                    <div className="db-card delay-1">
-                      {/* Stats */}
-                      <div className="db-stats-row">
-                        <div className="db-stat db-stat-hero" style={{ animationDelay: '0.1s' }}>
-                          <div className="db-stat-value-hero">$ {moneyFormatter.format(totalSaldo)}</div>
-                          <div className="db-stat-label">Saldo total</div>
-                        </div>
-                        <div className="db-stat db-stat-plain" style={{ animationDelay: '0.15s' }}>
-                          <div className="db-stat-value">{billeteras.length}</div>
-                          <div className="db-stat-label">Billeteras activas</div>
-                        </div>
-                        <div className="db-stat db-stat-plain" style={{ animationDelay: '0.2s' }}>
-                          <div className="db-stat-value">{puntosActuales}</div>
-                          <div className="db-stat-label">Puntos acumulados</div>
-                        </div>
-                      </div>
-
-                      <hr className="db-divider" />
-
-                      {/* Billeteras */}
-                      <div className="db-card-header">
-                        <span className="db-card-title">Billeteras activas</span>
-                        <button className="btn-link" onClick={() => onNavigate('billeteras')}>Ver todas →</button>
-                      </div>
-
+                  {/* ── Billeteras ── */}
+                  <div className="db-panel accent-border d1" style={{ gridColumn: 'span 1' }}>
+                    <div className="db-panel-head">
+                      <span className="db-panel-title">Billeteras activas</span>
+                      <button className="db-btn-text" onClick={() => onNavigate('billeteras')}>Ver todas →</button>
+                    </div>
+                    <div className="db-panel-body">
                       {billeteras.length ? (
                           <>
-                            <div className="db-table-head db-table-head-billeteras">
+                            <div className="db-wtable-head">
                               <span>Nombre</span>
                               <span>Tipo</span>
                               <span>Saldo</span>
-                              <span style={{ textAlign: 'right' }}>Acción</span>
+                              <span>Acción</span>
                             </div>
                             {billeteras.map((wallet) => (
-                                <div key={wallet.id} className="db-wallet-row">
-                                  <span className="db-wallet-name">{wallet.nombre}</span>
-                                  <span className="db-wallet-tipo">{wallet.tipo}</span>
-                                  <span className="db-wallet-saldo">$ {moneyFormatter.format(Number(wallet.saldo || 0))}</span>
-                                  <div style={{ textAlign: 'right' }}>
-                                    <button className="btn-outline" onClick={() => onNavigate('billeteras')}>Ver</button>
+                                <div key={wallet.id} className="db-wrow">
+                                  <div className="db-wrow-name">
+                                    {wallet.nombre}
+                                    <span className="db-wrow-tipo">{wallet.tipo}</span>
                                   </div>
+                                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{wallet.tipo}</span>
+                                  <span className="db-wrow-saldo">$ {moneyFormatter.format(Number(wallet.saldo || 0))}</span>
+                                  <button className="db-btn-ghost" onClick={() => onNavigate('billeteras')}>Ver</button>
                                 </div>
                             ))}
                           </>
                       ) : (
                           <div className="db-empty">
-                            <p>Aún no hay billeteras registradas para este usuario.</p>
-                            <button className="btn-link" onClick={() => onNavigate('billeteras')}>Crear la primera billetera</button>
+                            <p>Sin billeteras registradas.</p>
+                            <button className="db-btn-ghost" onClick={() => onNavigate('billeteras')}>Crear billetera</button>
                           </div>
                       )}
                     </div>
+                  </div>
 
-                    {/* Card: Actividad reciente */}
-                    <div className="db-card delay-2">
-                      <div className="db-card-header">
-                        <span className="db-card-title">Actividad reciente</span>
-                        <span className="db-card-label">Últimas 5</span>
-                      </div>
-
+                  {/* ── Actividad reciente ── */}
+                  <div className="db-panel d2" style={{ gridColumn: 'span 1' }}>
+                    <div className="db-panel-head">
+                      <span className="db-panel-title">Actividad reciente</span>
+                      <span className="db-panel-badge">Últimas 5</span>
+                    </div>
+                    
+                    <div className="db-panel-body">
                       {transaccionesQuery.isLoading ? (
                           <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
                             <LoadingSpinner />
                           </div>
                       ) : transacciones.length ? (
                           <>
-                            <div className="db-table-head db-table-head-tx">
-                              <span>Tipo</span>
+                            <div className="db-tx-head">
+                              <span>Tipo / Fecha</span>
                               <span>Monto</span>
                               <span>Estado</span>
-                              <span>Fecha</span>
-                              <span style={{ textAlign: 'right' }}>Acción</span>
                             </div>
-                            {transacciones.map((transaccion) => (
-                                <TransaccionItem key={transaccion.id} transaccion={transaccion} />
-                            ))}
+                            {transacciones.map((tx) => {
+                              const estado = String(tx.estado || tx.status || '').toLowerCase();
+                              const estadoClass =
+                                  estado.includes('complet') || estado.includes('exitosa') ? 'estado-completada' :
+                                      estado.includes('pend') ? 'estado-pendiente' :
+                                          estado.includes('fall') || estado.includes('error') ? 'estado-fallida' :
+                                              'estado-default';
+                              const monto = Number(tx.monto || tx.valor || tx.amount || 0);
+                              return (
+                                  <div key={tx.id} className="db-tx-row">
+                                    <div className="db-tx-tipo">
+                                      {tx.tipo || tx.type || 'Transacción'}
+                                      <span className="db-tx-fecha">
+                                {tx.fecha ? tx.fecha.replace('T', ' ').slice(0, 16) : '—'}
+                              </span>
+                                    </div>
+                                    <span className="db-tx-monto">$ {moneyFormatter.format(monto)}</span>
+                                    <span className={`db-tx-estado ${estadoClass}`}>{tx.estado || tx.status || '—'}</span>
+                                  </div>
+                              );
+                            })}
                           </>
                       ) : (
                           <div className="db-empty">
-                            <p>Sin movimientos recientes. Registra una operación para ver actividad aquí.</p>
-                            <button className="btn-link" onClick={() => onNavigate('transacciones')}>Crear una transacción</button>
+                            <p>Sin movimientos recientes.</p>
+                            <button className="db-btn-ghost" onClick={() => onNavigate('transacciones')}>Nueva transacción</button>
                           </div>
                       )}
                     </div>
                   </div>
 
-                  {/* ══ Sidebar (span 1) ══ */}
-                  <div className="span-1" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* ── Sidebar: Nivel + Perfil ── */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-                    {/* Card: Nivel */}
-                    <div className="db-card delay-3">
-                      <div className="db-card-header">
-                        <span className="db-card-title">Nivel del usuario</span>
-                        <span className="db-card-label">Fidelización</span>
+                    {/* Nivel */}
+                    <div className="db-panel accent-border d3">
+                      <div className="db-panel-head">
+                        <span className="db-panel-title">Nivel de fidelización</span>
+                        <span className="db-panel-badge">Estado</span>
                       </div>
-                      <div className="db-nivel-section">
-                        <NivelBadge nivel={nivelActual} puntos={puntosActuales} />
-                        <div className="db-progreso-text">
-                          {umbralSiguiente > 0
-                              ? `${puntosActuales} de ${umbralSiguiente} pts hacia el siguiente nivel`
-                              : 'Nivel máximo alcanzado'}
+                      <div className="db-panel-body">
+                        <div className="db-nivel-arc">
+                          <div style={{ position: 'relative', flexShrink: 0 }}>
+                            <ProgressArc value={puntosActuales} max={umbralSiguiente || puntosActuales || 1} size={80} />
+                            <div style={{
+                              position: 'absolute', inset: 0,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--green)',
+                              fontWeight: 700,
+                            }}>
+                              {progreso}%
+                            </div>
+                          </div>
+                          <div className="db-nivel-arc-text">
+                            <span className="db-nivel-name">{nivelActual.toUpperCase()}</span>
+                            <span className="db-nivel-pts">{puntosActuales} puntos acumulados</span>
+                          </div>
                         </div>
-                        <div className="db-progreso-bar-bg">
-                          <div className="db-progreso-bar" style={{ width: `${progreso}%` }} />
+                        <div className="db-progress-bar-wrap">
+                          <div className="db-progress-bar-track">
+                            <div className="db-progress-bar-fill" style={{ width: `${progreso}%` }} />
+                          </div>
+                          <div className="db-progress-label">
+                            <span>{puntosActuales} pts</span>
+                            <span>{umbralSiguiente > 0 ? `${umbralSiguiente} pts` : 'Máximo'}</span>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: '1rem' }}>
+                          <button className="db-btn-ghost" style={{ width: '100%', textAlign: 'center' }} onClick={() => onNavigate('recompensas')}>
+                            Ver recompensas →
+                          </button>
                         </div>
                       </div>
                     </div>
 
-                    {/* Card: Perfil */}
-                    <div className="db-card delay-4">
-                      <div className="db-card-header">
-                        <span className="db-card-title">Perfil</span>
-                        <span className="db-card-label">Detalle de cuenta</span>
+                    {/* Perfil */}
+                    <div className="db-panel d4" style={{ flex: 1 }}>
+                      <div className="db-panel-head">
+                        <span className="db-panel-title">Perfil de cuenta</span>
+                        <span className="db-panel-badge">Activo</span>
                       </div>
-
-                      {usuario ? (
-                          <div className="db-perfil-grid">
-                            <div className="db-perfil-field">
-                              <span className="db-perfil-field-label">Nombre</span>
-                              <span className="db-perfil-field-value">{usuario.nombre}</span>
+                      <div className="db-panel-body">
+                        {usuario ? (
+                            <div className="db-perfil-grid">
+                              <div className="db-field">
+                                <span className="db-field-label">Nombre</span>
+                                <span className="db-field-value">{usuario.nombre}</span>
+                              </div>
+                              <div className="db-field">
+                                <span className="db-field-label">Nivel</span>
+                                <span className="db-field-value" style={{ color: 'var(--green)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', fontWeight: 700 }}>
+                            {nivelActual.toUpperCase()}
+                          </span>
+                              </div>
+                              <div className="db-field" style={{ gridColumn: '1 / -1' }}>
+                                <span className="db-field-label">Email</span>
+                                <span className="db-field-value" style={{ fontSize: '0.75rem' }}>{usuario.email || '—'}</span>
+                              </div>
+                              <div className="db-field">
+                                <span className="db-field-label">Teléfono</span>
+                                <span className="db-field-value">{usuario.telefono || '—'}</span>
+                              </div>
+                              <div className="db-field">
+                                <span className="db-field-label">Registro</span>
+                                <span className="db-field-value" style={{ fontSize: '0.72rem' }}>
+                            {usuario.fechaRegistro ? dateFormatter.format(new Date(usuario.fechaRegistro)) : '—'}
+                          </span>
+                              </div>
                             </div>
-                            <div className="db-perfil-field">
-                              <span className="db-perfil-field-label">Nivel</span>
-                              <span className="db-nivel-pill">{nivelActual}</span>
+                        ) : (
+                            <div className="db-empty">
+                              <p>No hay datos de perfil disponibles.</p>
                             </div>
-                            <div className="db-perfil-field">
-                              <span className="db-perfil-field-label">Email</span>
-                              <span className="db-perfil-field-value" style={{ wordBreak: 'break-all', fontSize: '0.8rem' }}>
-                          {usuario.email || 'Sin email registrado'}
-                        </span>
-                            </div>
-                            <div className="db-perfil-field">
-                              <span className="db-perfil-field-label">Puntos acumulados</span>
-                              <span className="db-perfil-field-value" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: '1.1rem' }}>
-                          {puntosActuales}
-                        </span>
-                            </div>
-                            <div className="db-perfil-field">
-                              <span className="db-perfil-field-label">Teléfono</span>
-                              <span className="db-perfil-field-value">{usuario.telefono || 'Sin teléfono'}</span>
-                            </div>
-                            <div className="db-perfil-field">
-                              <span className="db-perfil-field-label">Registro</span>
-                              <span className="db-perfil-field-value" style={{ fontSize: '0.78rem' }}>
-                          {usuario.fechaRegistro ? dateFormatter.format(new Date(usuario.fechaRegistro)) : 'Sin fecha'}
-                        </span>
-                            </div>
-                          </div>
-                      ) : (
-                          <div className="db-empty">
-                            <p>No hay información del usuario disponible.</p>
-                          </div>
-                      )}
+                        )}
+                      </div>
                     </div>
 
                   </div>

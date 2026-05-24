@@ -2,7 +2,9 @@ import { useState } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AlertaPanel from '../components/AlertaPanel';
 import { usePuntosRecompensas, useNivelRecompensas, useBeneficios, useCanjeaBeneficio } from '../hooks/useRecompensas';
+import { Check, Sparkles, Lock } from 'lucide-react';
 
+/* ─── Static data ──────────────────────────────────────── */
 const BENEFICIOS = [
   { id: '1', descripcion: 'Reduce el costo de operaciones frecuentes durante el mes.', nivelRequerido: 'Bronce', puntosNecesarios: 120, tipo: 'descuento_transferencias', activo: true },
   { id: '2', descripcion: 'Recibe una bonificación directa sobre tu billetera principal.', nivelRequerido: 'Plata', puntosNecesarios: 180, tipo: 'bonificacion_saldo', activo: true },
@@ -14,160 +16,285 @@ const BENEFICIOS = [
 
 const BENEFICIO_LABELS = {
   descuento_transferencias: 'Descuento en transferencias',
-  bonificacion_saldo: 'Bonificacion de saldo',
+  bonificacion_saldo: 'Bonificación de saldo',
   cashback_compras: 'Cashback de compras',
   soporte_prioritario: 'Soporte prioritario',
-  incremento_limites: 'Incremento de limites',
-  tarjeta_fisica: 'Tarjeta fisica sin costo',
+  incremento_limites: 'Incremento de límites',
+  tarjeta_fisica: 'Tarjeta física sin costo',
 };
 
-function getBeneficioLabel(beneficio) {
-  return BENEFICIO_LABELS[beneficio.tipo] || beneficio.tipo || 'Beneficio';
+const LEVEL_ORDER = ['Bronce', 'Plata', 'Oro', 'Platino'];
+
+const LEVEL_CONFIG = {
+  Bronce:  { color: '#CD7F32', bg: 'rgba(205,127,50,0.10)', border: 'rgba(205,127,50,0.25)', label: 'Acceso básico con beneficios esenciales y acumulación estándar de puntos.' },
+  Plata:   { color: '#A0A0A0', bg: 'rgba(160,160,160,0.10)', border: 'rgba(160,160,160,0.25)', label: 'Mejoras en costos de operación y beneficios frecuentes para uso diario.' },
+  Oro:     { color: '#E8C54A', bg: 'rgba(232,197,74,0.10)', border: 'rgba(232,197,74,0.25)', label: 'Condiciones preferentes, soporte reforzado y mayor retorno por actividad.' },
+  Platino: { color: '#8AB4D4', bg: 'rgba(138,180,212,0.10)', border: 'rgba(138,180,212,0.25)', label: 'Nivel máximo con ventajas exclusivas y prioridad operativa extendida.' },
+};
+
+function getBeneficioLabel(b) {
+  return BENEFICIO_LABELS[b.tipo] || b.tipo || 'Beneficio';
 }
 
-const LEVEL_TEXT = {
-  Bronce: 'Acceso básico con beneficios esenciales y acumulación estándar de puntos.',
-  Plata: 'Mejoras en costos de operación y beneficios frecuentes para uso diario.',
-  Oro: 'Condiciones preferentes, soporte reforzado y mayor retorno por actividad.',
-  Platino: 'Nivel máximo con ventajas exclusivas y prioridad operativa extendida.',
-};
+function extractLevel(data) {
+  if (typeof data === 'string') return data;
+  if (data && typeof data === 'object') return data.nivel || data.level || 'Bronce';
+  return 'Bronce';
+}
 
+function extractPoints(data) {
+  if (typeof data === 'number') return data;
+  if (typeof data === 'string' && !isNaN(Number(data))) return Number(data);
+  if (data && typeof data === 'object') return Number(data.puntosActuales ?? data.puntos ?? data.puntosAcumulados ?? 0);
+  return 0;
+}
+
+function getThreshold(level) {
+  const lv = level.toUpperCase();
+  if (lv === 'BRONCE') return 1000;
+  if (lv === 'PLATA') return 5000;
+  if (lv === 'ORO') return 15000;
+  return 0;
+}
+
+/* ─── Level step indicator ────────────────────────────── */
+function LevelSteps({ currentLevel }) {
+  const currentIdx = LEVEL_ORDER.findIndex(l => l.toLowerCase() === currentLevel.toLowerCase());
+  return (
+      <div className="flex items-center gap-0">
+        {LEVEL_ORDER.map((level, i) => {
+          const cfg = LEVEL_CONFIG[level];
+          const isActive = i === currentIdx;
+          const isDone = i < currentIdx;
+          return (
+              <div key={level} className="flex items-center">
+                <div className="flex flex-col items-center gap-1.5">
+                  <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center border text-[10px] font-bold transition-all duration-300"
+                      style={{
+                        background: isActive || isDone ? cfg.bg : 'transparent',
+                        borderColor: isActive || isDone ? cfg.color : '#2A2A2A',
+                        color: isActive || isDone ? cfg.color : '#3A3A3A',
+                      }}
+                  >
+                    {isDone ? <Check size={11} /> : i + 1}
+                  </div>
+                  <span
+                      className="text-[10px] font-medium tracking-wide"
+                      style={{ color: isActive ? cfg.color : isDone ? '#5A5A5A' : '#2E2E2E' }}
+                  >
+                {level}
+              </span>
+                </div>
+                {i < LEVEL_ORDER.length - 1 && (
+                    <div
+                        className="w-10 h-px mb-5 transition-all duration-300"
+                        style={{ background: i < currentIdx ? LEVEL_CONFIG[LEVEL_ORDER[i]].color : '#222222' }}
+                    />
+                )}
+              </div>
+          );
+        })}
+      </div>
+  );
+}
+
+/* ─── Benefit card ────────────────────────────────────── */
+function BeneficioCard({ beneficio, points, isRedeeming, redeemed, onRedeem }) {
+  const hasPoints = points >= beneficio.puntosNecesarios;
+  const isDone    = redeemed.includes(beneficio.id);
+  const isLocked  = !beneficio.activo || (!hasPoints && !isDone);
+
+  return (
+      <article className="relative flex flex-col bg-[#111111] border border-[#1E1E1E] rounded-xl p-5 gap-4 overflow-hidden transition-all duration-150 hover:border-[#2A2A2A] group">
+        {/* top accent line */}
+        <div
+            className="absolute inset-x-0 top-0 h-px opacity-60"
+            style={{ background: isDone ? '#6A9B6A' : hasPoints ? '#D38343' : '#2A2A2A' }}
+        />
+
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-1 flex-1 min-w-0">
+            <h3 className="text-sm font-semibold text-[#D4D4D4] leading-tight">{getBeneficioLabel(beneficio)}</h3>
+            <span className="text-[10px] font-medium tracking-wide text-[#4A4A4A] uppercase">
+            Nivel: {beneficio.nivelRequerido}
+          </span>
+          </div>
+          <div
+              className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold border"
+              style={{
+                background: isDone ? 'rgba(106,155,106,0.10)' : hasPoints ? 'rgba(211,131,67,0.10)' : '#0D0D0D',
+                borderColor: isDone ? 'rgba(106,155,106,0.25)' : hasPoints ? 'rgba(211,131,67,0.25)' : '#1E1E1E',
+                color: isDone ? '#6A9B6A' : hasPoints ? '#D38343' : '#3A3A3A',
+              }}
+          >
+            {isDone ? <Check size={16} /> : isLocked && !hasPoints ? <Lock size={13} /> : <Sparkles size={13} />}
+          </div>
+        </div>
+
+        <p className="text-xs text-[#5A5A5A] leading-relaxed flex-1">{beneficio.descripcion}</p>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5">
+          <span className="text-lg font-bold" style={{ color: hasPoints || isDone ? '#D38343' : '#3A3A3A' }}>
+            {beneficio.puntosNecesarios}
+          </span>
+            <span className="text-[10px] text-[#3A3A3A] font-medium">pts</span>
+          </div>
+
+          <button
+              type="button"
+              onClick={() => onRedeem(beneficio)}
+              disabled={isRedeeming || !hasPoints || !beneficio.activo || isDone}
+              className={`
+            px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-150 border
+            disabled:cursor-not-allowed
+            ${isDone
+                  ? 'bg-[#6A9B6A]/10 border-[#6A9B6A]/20 text-[#6A9B6A] cursor-default'
+                  : hasPoints && beneficio.activo
+                      ? 'bg-[#D38343]/10 border-[#D38343]/25 text-[#D38343] hover:bg-[#D38343]/18 active:scale-95'
+                      : 'bg-transparent border-[#1E1E1E] text-[#2E2E2E]'
+              }
+          `}
+          >
+            {isRedeeming
+                ? 'Procesando…'
+                : isDone
+                    ? 'Canjeado'
+                    : beneficio.activo
+                        ? hasPoints ? 'Canjear' : `Faltan ${beneficio.puntosNecesarios - points} pts`
+                        : 'No disponible'}
+          </button>
+        </div>
+      </article>
+  );
+}
+
+/* ─── Main ────────────────────────────────────────────── */
 export default function Recompensas({ userId }) {
-  const [error, setError] = useState('');
+  const [error, setError]     = useState('');
   const [success, setSuccess] = useState('');
   const [redeemed, setRedeemed] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(`redeemed_${userId}`)) || [];
-    } catch {
-      return [];
-    }
+    try { return JSON.parse(localStorage.getItem(`redeemed_${userId}`)) || []; }
+    catch { return []; }
   });
-  
-  // Hooks
-  const puntosQuery = usePuntosRecompensas(userId);
-  const nivelQuery = useNivelRecompensas(userId);
-  const beneficiosQuery = useBeneficios();
-  const canjeaMutation = useCanjeaBeneficio();
 
-  // Handle redeem
+  const puntosQuery    = usePuntosRecompensas(userId);
+  const nivelQuery     = useNivelRecompensas(userId);
+  const beneficiosQuery = useBeneficios();
+  const canjeaMutation  = useCanjeaBeneficio();
+
   async function handleRedeem(beneficio) {
     try {
       setError('');
       setSuccess('');
       await canjeaMutation.mutateAsync({ usuarioId: userId, beneficioId: beneficio.id });
-      setSuccess(`Canje realizado exitosamente.`);
-      
-      const newRedeemed = [...redeemed, beneficio.id];
-      setRedeemed(newRedeemed);
-      localStorage.setItem(`redeemed_${userId}`, JSON.stringify(newRedeemed));
-    } catch (requestError) {
-      setError(requestError?.message || 'No fue posible canjear el beneficio.');
+      setSuccess('Canje realizado exitosamente.');
+      const next = [...redeemed, beneficio.id];
+      setRedeemed(next);
+      localStorage.setItem(`redeemed_${userId}`, JSON.stringify(next));
+    } catch (e) {
+      setError(e?.message || 'No fue posible canjear el beneficio.');
     }
   }
 
-  // Helper functions
-  const extractLevel = (data) => {
-    if (typeof data === 'string') return data;
-    if (data && typeof data === 'object') return data.nivel || data.level || 'Bronce';
-    return 'Bronce';
-  };
-
-  const extractPoints = (data) => {
-    if (typeof data === 'number') return data;
-    if (typeof data === 'string' && !isNaN(Number(data))) return Number(data);
-    if (data && typeof data === 'object') return Number(data.puntosActuales ?? data.puntos ?? data.puntosAcumulados ?? 0);
-    return 0;
-  };
-
-  const getThreshold = (level) => {
-    const lv = level.toUpperCase();
-    if (lv === 'BRONCE') return 1000;
-    if (lv === 'PLATA') return 5000;
-    if (lv === 'ORO') return 15000;
-    return 0; // Platino or max
-  };
-
-  // Extract data
-  const rawLevel = extractLevel(nivelQuery.data);
+  const rawLevel     = extractLevel(nivelQuery.data);
   const currentLevel = rawLevel.charAt(0).toUpperCase() + rawLevel.slice(1).toLowerCase();
-  
-  const points = extractPoints(puntosQuery.data);
-  const threshold = getThreshold(currentLevel);
-  const progress = threshold > 0 ? Math.min(100, Math.round((points / threshold) * 100)) : 100;
+  const cfg          = LEVEL_CONFIG[currentLevel] || LEVEL_CONFIG.Bronce;
+  const points       = extractPoints(puntosQuery.data);
+  const threshold    = getThreshold(currentLevel);
+  const progress     = threshold > 0 ? Math.min(100, Math.round((points / threshold) * 100)) : 100;
+  const beneficiosData = Array.isArray(beneficiosQuery.data)
+      ? beneficiosQuery.data
+      : (beneficiosQuery.data?.beneficios || BENEFICIOS);
 
-  const beneficiosData = Array.isArray(beneficiosQuery.data) ? beneficiosQuery.data : (beneficiosQuery.data?.beneficios || BENEFICIOS);
-
-  const isLoading = puntosQuery.isLoading || nivelQuery.isLoading || beneficiosQuery.isLoading;
+  const isLoading   = puntosQuery.isLoading || nivelQuery.isLoading || beneficiosQuery.isLoading;
   const isRedeeming = canjeaMutation.isPending;
 
   return (
-    <section className="flex flex-col gap-6 relative">
-      {error && <div className="absolute top-0 right-0 w-full lg:w-auto z-10"><AlertaPanel type="error" title="No fue posible completar la acción" message={error} /></div>}
-      {success && <div className="absolute top-0 right-0 w-full lg:w-auto z-10"><AlertaPanel type="success" title="Canje confirmado" message={success} /></div>}
-      {isLoading ? <div className="flex justify-center py-10"><LoadingSpinner /></div> : (
-        <>
-          <div className="bg-superficie rounded-md shadow-sutil border border-borde p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-6 items-center">
-              <div className="flex flex-col gap-3">
-                <span className="text-xs uppercase tracking-wider text-textoSecundario font-medium">Fidelización</span>
-                <div className="text-2xl font-bold text-textoPrincipal">{currentLevel}</div>
-                <div className="text-5xl font-bold text-acento leading-none">{points}</div>
-                <div className="text-base text-textoSecundario max-w-2xl">{LEVEL_TEXT[currentLevel] || LEVEL_TEXT.Bronce}</div>
-              </div>
-              <div className="flex flex-col gap-3">
-                <div className="w-full h-2 bg-borde rounded-full overflow-hidden">
-                  <div className="h-full bg-acento transition-all duration-500 ease-smooth" style={{ width: `${progress}%` }} />
-                </div>
-                <div className="text-sm text-textoSecundario font-medium">
-                  {threshold > 0 ? `${points} de ${threshold} puntos para el siguiente nivel` : 'Has alcanzado el nivel máximo disponible'}
-                </div>
-              </div>
-            </div>
-          </div>
+      <section className="flex flex-col gap-5 relative">
+        {error   && <div className="absolute top-0 right-0 w-full lg:w-auto z-10"><AlertaPanel type="error"   title="Error"             message={error}   /></div>}
+        {success && <div className="absolute top-0 right-0 w-full lg:w-auto z-10"><AlertaPanel type="success" title="Canje confirmado"   message={success} /></div>}
 
-          <div className="bg-superficie rounded-md shadow-sutil border border-borde p-6">
-            <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
-              <h2 className="text-xl font-semibold text-textoPrincipal">Beneficios disponibles</h2>
-              <span className="text-xs uppercase tracking-wider text-textoSecundario font-medium">Canje inmediato</span>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {beneficiosData.map((beneficio) => (
-                <article 
-                  key={beneficio.id} 
-                  className="group relative overflow-hidden flex flex-col p-6 bg-superficie border border-borde rounded-md shadow-sutil transition-all duration-150 hover:-translate-y-1 hover:shadow-media before:absolute before:inset-0 before:bg-gradient-to-br before:from-transparent before:to-acento/5 before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-200"
-                >
-                  <div className="relative z-10 flex flex-col h-full gap-4">
-                    <div className="flex justify-between items-start gap-4">
-                      <h3 className="text-base font-semibold text-textoPrincipal leading-tight">{getBeneficioLabel(beneficio)}</h3>
-                      <div className="w-[32px] h-[32px] rounded-full bg-fondo flex items-center justify-center shrink-0 border border-borde/50 text-xs font-semibold text-acento">
-                        {beneficio.puntosNecesarios}
+        {isLoading ? (
+            <div className="flex justify-center py-16"><LoadingSpinner /></div>
+        ) : (
+            <>
+              {/* Level card */}
+              <div className="bg-[#111111] border border-[#1E1E1E] rounded-xl p-6 relative overflow-hidden">
+                {/* Ambient glow */}
+                <div
+                    className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-5 pointer-events-none"
+                    style={{ background: cfg.color }}
+                />
+
+                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
+                  <div className="flex flex-col gap-5">
+                    <div className="flex items-center gap-3">
+                      <div
+                          className="px-3 py-1 rounded-full text-xs font-semibold tracking-wide border"
+                          style={{ color: cfg.color, background: cfg.bg, borderColor: cfg.border }}
+                      >
+                        {currentLevel}
+                      </div>
+                      <span className="text-[10px] text-[#3A3A3A] uppercase tracking-wider font-medium">Fidelización</span>
+                    </div>
+
+                    <div className="flex items-end gap-2">
+                  <span className="text-5xl font-black leading-none" style={{ color: cfg.color }}>
+                    {points.toLocaleString('es-CO')}
+                  </span>
+                      <span className="text-sm font-medium text-[#4A4A4A] mb-1.5">puntos</span>
+                    </div>
+
+                    <p className="text-sm text-[#5A5A5A] max-w-md leading-relaxed">{cfg.label}</p>
+
+                    {/* Progress */}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between text-[10px] font-medium text-[#3A3A3A]">
+                        <span>{threshold > 0 ? `${points.toLocaleString()} / ${threshold.toLocaleString()} pts al siguiente nivel` : 'Nivel máximo alcanzado'}</span>
+                        <span>{progress}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-[#1A1A1A] overflow-hidden">
+                        <div
+                            className="h-full rounded-full transition-all duration-700 ease-out"
+                            style={{ width: `${progress}%`, background: cfg.color }}
+                        />
                       </div>
                     </div>
-                    
-                    <div className="text-xs uppercase tracking-wider text-textoSecundario font-medium">
-                      Nivel requerido: {beneficio.nivelRequerido}
-                    </div>
-
-                    <p className="text-sm text-textoSecundario flex-1 leading-relaxed">
-                      {beneficio.descripcion}
-                    </p>
-                    
-                    <button
-                      type="button"
-                      className="w-full mt-2 py-[10px] px-4 rounded-md font-medium bg-acento text-superficie transition-all duration-150 hover:bg-gradient-to-r hover:from-[#C47A44] hover:to-[#B86A38] active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-acento"
-                      onClick={() => handleRedeem(beneficio)}
-                      disabled={isRedeeming || points < beneficio.puntosNecesarios || !beneficio.activo || redeemed.includes(beneficio.id)}
-                    >
-                      {isRedeeming ? 'Procesando...' : redeemed.includes(beneficio.id) ? 'Canjeado' : beneficio.activo ? 'Canjear beneficio' : 'No disponible'}
-                    </button>
                   </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-    </section>
+
+                  {/* Level steps */}
+                  <div className="flex flex-col items-end gap-2 pt-1">
+                    <LevelSteps currentLevel={currentLevel} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Benefits grid */}
+              <div className="bg-[#111111] border border-[#1E1E1E] rounded-xl p-6 flex flex-col gap-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-[#D4D4D4] tracking-wide">Beneficios disponibles</h2>
+                  <span className="text-[10px] font-medium tracking-[0.1em] uppercase text-[#4A4A4A] bg-[#1A1A1A] border border-[#252525] px-2 py-1 rounded-md">
+                Canje inmediato
+              </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {beneficiosData.map((b) => (
+                      <BeneficioCard
+                          key={b.id}
+                          beneficio={b}
+                          points={points}
+                          isRedeeming={isRedeeming}
+                          redeemed={redeemed}
+                          onRedeem={handleRedeem}
+                      />
+                  ))}
+                </div>
+              </div>
+            </>
+        )}
+      </section>
   );
 }
