@@ -94,7 +94,6 @@ export default function Transacciones({ userId }) {
   const [filterEnd, setFilterEnd] = useState('');
   const [revertingId, setRevertingId] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
-
   const programadasQuery = useOperacionesProgramadas(userId);
   const programadas = Array.isArray(programadasQuery.data)
       ? programadasQuery.data

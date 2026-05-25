@@ -282,5 +282,6 @@ export default function App() {
         {/* ── Asistente IA flotante ── */}
         <AIChat />
       </>
+
   );
 }
