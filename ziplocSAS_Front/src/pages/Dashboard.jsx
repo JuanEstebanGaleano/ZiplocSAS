@@ -6,6 +6,7 @@ import { useTransacciones } from '../hooks/useTransacciones';
 import { usePuntosRecompensas, useNivelRecompensas } from '../hooks/useRecompensas';
 import { useEffect, useState, useRef } from 'react';
 import { obtenerUsuarioPorId } from '../services/api';
+import AIChat from '../components/AIChat';
 
 const moneyFormatter = new Intl.NumberFormat('es-CO', {
   minimumFractionDigits: 0,
@@ -444,6 +445,7 @@ export default function Dashboard({ userId, onNavigate }) {
         .d4 { animation-delay: 0.20s; }
         .d5 { animation-delay: 0.25s; }
       `}</style>
+        <AIChat />
 
         <div className="db-atmo" />
         <div className="db-scan" />

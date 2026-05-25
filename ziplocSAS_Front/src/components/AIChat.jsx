@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 
 // ── Constantes ──────────────────────────────────────────
+const GROQ_URL = '/api/groq/openai/v1/chat/completions';
+
 const SYSTEM_PROMPT = `Eres el asistente financiero de ZiplocSAS, una plataforma de billeteras digitales y transacciones.
 Tu nombre es ZARA (ZiplocSAS AI Research Assistant).
 Responde siempre en español, de forma concisa y útil.
@@ -14,7 +16,7 @@ function TypingDots() {
             {[0, 1, 2].map(i => (
                 <span key={i} style={{
                     width: 5, height: 5, borderRadius: '50%',
-                    background: 'var(--zc-green)',
+                    background: '#00ff88',
                     display: 'inline-block',
                     animation: `zcDot 1.2s ease-in-out ${i * 0.2}s infinite`,
                 }} />
@@ -35,7 +37,7 @@ function Message({ msg }) {
             animation: 'zcFadeUp 0.25s ease both',
         }}>
       <span style={{
-          fontFamily: 'var(--font-mono)',
+          fontFamily: "'Space Mono', monospace",
           fontSize: '0.55rem',
           textTransform: 'uppercase',
           letterSpacing: '0.1em',
@@ -47,9 +49,7 @@ function Message({ msg }) {
                 maxWidth: '85%',
                 padding: '0.6rem 0.85rem',
                 borderRadius: isUser ? '12px 12px 2px 12px' : '2px 12px 12px 12px',
-                background: isUser
-                    ? 'rgba(0,207,255,0.08)'
-                    : 'rgba(0,255,136,0.06)',
+                background: isUser ? 'rgba(0,207,255,0.08)' : 'rgba(0,255,136,0.06)',
                 border: `1px solid ${isUser ? 'rgba(0,207,255,0.2)' : 'rgba(0,255,136,0.15)'}`,
                 fontSize: '0.8rem',
                 lineHeight: 1.55,
@@ -103,29 +103,34 @@ export default function AIChat() {
         setLoading(true);
 
         try {
-            const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
-
-            const response = await fetch('/api/anthropic/v1/messages', {
+            const response = await fetch(GROQ_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: 'claude-sonnet-4-20250514',
+                    model: 'llama-3.3-70b-versatile',
+                    messages: [
+                        { role: 'system', content: SYSTEM_PROMPT },
+                        ...newMessages.map(m => ({ role: m.role, content: m.content })),
+                    ],
                     max_tokens: 1000,
-                    system: SYSTEM_PROMPT,
-                    messages: apiMessages,
+                    temperature: 0.7,
                 }),
             });
 
-            const data = await response.json();
-            const replyText = data.content?.map(b => b.text || '').join('') || 'Sin respuesta.';
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData?.error?.message || `HTTP ${response.status}`);
+            }
 
-            const assistantMsg = { role: 'assistant', content: replyText };
-            setMessages(prev => [...prev, assistantMsg]);
+            const data = await response.json();
+            const replyText = data.choices?.[0]?.message?.content || 'Sin respuesta.';
+
+            setMessages(prev => [...prev, { role: 'assistant', content: replyText }]);
             if (!open) setUnread(u => u + 1);
         } catch (err) {
             setMessages(prev => [
                 ...prev,
-                { role: 'assistant', content: 'Error al conectar con el servicio. Por favor intenta de nuevo.' },
+                { role: 'assistant', content: `Error: ${err.message || 'No se pudo conectar con el servicio.'}` },
             ]);
         } finally {
             setLoading(false);
@@ -142,6 +147,8 @@ export default function AIChat() {
     return (
         <>
             <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap');
+
         @keyframes zcDot {
           0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
           40%            { transform: scale(1);   opacity: 1; }
@@ -152,7 +159,7 @@ export default function AIChat() {
         }
         @keyframes zcSlideUp {
           from { opacity: 0; transform: translateY(20px) scale(0.96); }
-          to   { opacity: 1; transform: translateY(0)   scale(1); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
         }
         @keyframes zcPulseRing {
           0%   { transform: scale(1);    opacity: 0.6; }
@@ -162,227 +169,152 @@ export default function AIChat() {
         @keyframes zcSpin {
           to { transform: rotate(360deg); }
         }
+
         .zc-bubble-btn {
-          position: fixed;
-          bottom: 2rem;
-          right: 2rem;
-          z-index: 9999;
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
-          border: none;
+          position: fixed; bottom: 2rem; right: 2rem; z-index: 9999;
+          width: 56px; height: 56px; border-radius: 50%; border: none;
           cursor: pointer;
           background: linear-gradient(135deg, #00ff88 0%, #00cfff 100%);
-          box-shadow: 0 4px 24px rgba(0,255,136,0.35), 0 0 0 0 rgba(0,255,136,0.4);
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          box-shadow: 0 4px 24px rgba(0,255,136,0.35);
+          display: flex; align-items: center; justify-content: center;
           transition: transform 0.2s, box-shadow 0.2s;
         }
         .zc-bubble-btn:hover {
           transform: scale(1.08);
-          box-shadow: 0 8px 32px rgba(0,255,136,0.5), 0 0 0 0 rgba(0,255,136,0.4);
+          box-shadow: 0 8px 32px rgba(0,255,136,0.5);
         }
         .zc-bubble-btn:active { transform: scale(0.95); }
+
         .zc-pulse-ring {
-          position: fixed;
-          bottom: 2rem;
-          right: 2rem;
-          z-index: 9998;
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
+          position: fixed; bottom: 2rem; right: 2rem; z-index: 9998;
+          width: 56px; height: 56px; border-radius: 50%;
           border: 2px solid rgba(0,255,136,0.5);
           animation: zcPulseRing 2.5s ease-out infinite;
           pointer-events: none;
         }
+
         .zc-unread {
-          position: absolute;
-          top: -3px;
-          right: -3px;
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          background: #ff3355;
-          border: 2px solid #060609;
-          font-family: 'Space Mono', monospace;
-          font-size: 0.55rem;
-          font-weight: 700;
-          color: #fff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          position: absolute; top: -3px; right: -3px;
+          width: 18px; height: 18px; border-radius: 50%;
+          background: #ff3355; border: 2px solid #060609;
+          font-family: 'Space Mono', monospace; font-size: 0.55rem;
+          font-weight: 700; color: #fff;
+          display: flex; align-items: center; justify-content: center;
         }
+
         .zc-panel {
-          position: fixed;
-          bottom: 5.5rem;
-          right: 2rem;
-          z-index: 9998;
-          width: 360px;
-          height: 520px;
-          display: flex;
-          flex-direction: column;
-          border-radius: 16px;
-          overflow: hidden;
+          position: fixed; bottom: 5.5rem; right: 2rem; z-index: 9998;
+          width: 360px; height: 520px;
+          display: flex; flex-direction: column;
+          border-radius: 16px; overflow: hidden;
           border: 1px solid rgba(0,255,136,0.2);
           box-shadow: 0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,255,136,0.05), inset 0 1px 0 rgba(255,255,255,0.04);
           background: #080b0a;
           animation: zcSlideUp 0.28s cubic-bezier(0.34,1.56,0.64,1) both;
         }
+
         .zc-panel-head {
           padding: 0.9rem 1.1rem;
           border-bottom: 1px solid rgba(0,255,136,0.12);
           background: rgba(0,255,136,0.04);
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          flex-shrink: 0;
+          display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;
         }
+
         .zc-avatar {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
+          width: 32px; height: 32px; border-radius: 50%;
           background: linear-gradient(135deg, rgba(0,255,136,0.2), rgba(0,207,255,0.15));
           border: 1.5px solid rgba(0,255,136,0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          position: relative;
-          overflow: hidden;
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0; position: relative; overflow: hidden;
         }
         .zc-avatar::after {
-          content: '';
-          position: absolute;
-          inset: -50%;
+          content: ''; position: absolute; inset: -50%;
           background: conic-gradient(from 0deg, transparent 75%, rgba(0,255,136,0.4) 100%);
           animation: zcSpin 3s linear infinite;
         }
         .zc-avatar-inner {
-          width: 12px;
-          height: 12px;
-          background: #00ff88;
+          width: 12px; height: 12px; background: #00ff88;
           clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-          z-index: 1;
-          flex-shrink: 0;
+          z-index: 1; flex-shrink: 0;
         }
+
         .zc-head-info { display: flex; flex-direction: column; gap: 1px; flex: 1; }
         .zc-head-name {
-          font-family: 'Space Mono', monospace;
-          font-size: 0.72rem;
-          font-weight: 700;
-          color: #00ff88;
-          letter-spacing: 0.06em;
+          font-family: 'Space Mono', monospace; font-size: 0.72rem;
+          font-weight: 700; color: #00ff88; letter-spacing: 0.06em;
         }
         .zc-head-status {
-          font-family: 'Space Mono', monospace;
-          font-size: 0.55rem;
-          color: rgba(0,255,136,0.45);
-          letter-spacing: 0.08em;
-          display: flex;
-          align-items: center;
-          gap: 5px;
+          font-family: 'Space Mono', monospace; font-size: 0.55rem;
+          color: rgba(0,255,136,0.45); letter-spacing: 0.08em;
+          display: flex; align-items: center; gap: 5px;
         }
         .zc-status-dot {
-          width: 5px; height: 5px;
-          border-radius: 50%;
-          background: #00ff88;
-          animation: zcDot 2s ease-in-out infinite;
+          width: 5px; height: 5px; border-radius: 50%;
+          background: #00ff88; animation: zcDot 2s ease-in-out infinite;
         }
+
         .zc-close-btn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: rgba(255,255,255,0.3);
-          padding: 4px;
-          border-radius: 6px;
+          background: none; border: none; cursor: pointer;
+          color: rgba(255,255,255,0.3); padding: 4px; border-radius: 6px;
           transition: color 0.15s, background 0.15s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          line-height: 1;
-          font-size: 1rem;
+          display: flex; align-items: center; justify-content: center;
+          line-height: 1; font-size: 1rem;
         }
         .zc-close-btn:hover { color: #fff; background: rgba(255,255,255,0.07); }
+
         .zc-messages {
-          flex: 1;
-          overflow-y: auto;
-          padding: 1rem;
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-          scrollbar-width: thin;
-          scrollbar-color: rgba(0,255,136,0.15) transparent;
+          flex: 1; overflow-y: auto; padding: 1rem;
+          display: flex; flex-direction: column; gap: 1rem;
+          scrollbar-width: thin; scrollbar-color: rgba(0,255,136,0.15) transparent;
         }
         .zc-messages::-webkit-scrollbar { width: 3px; }
         .zc-messages::-webkit-scrollbar-track { background: transparent; }
         .zc-messages::-webkit-scrollbar-thumb { background: rgba(0,255,136,0.2); border-radius: 99px; }
+
         .zc-scan-line {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background: repeating-linear-gradient(
-            0deg, transparent, transparent 2px,
-            rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px
-          );
-          opacity: 0.3;
-          border-radius: 16px;
+          position: absolute; inset: 0; pointer-events: none;
+          background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px);
+          opacity: 0.3; border-radius: 16px;
         }
+
         .zc-input-area {
           padding: 0.75rem 1rem;
           border-top: 1px solid rgba(0,255,136,0.1);
           background: rgba(0,0,0,0.3);
-          display: flex;
-          gap: 0.6rem;
-          align-items: flex-end;
-          flex-shrink: 0;
+          display: flex; gap: 0.6rem; align-items: flex-end; flex-shrink: 0;
         }
         .zc-textarea {
           flex: 1;
           background: rgba(0,255,136,0.04);
           border: 1px solid rgba(0,255,136,0.15);
-          border-radius: 10px;
-          padding: 0.55rem 0.85rem;
+          border-radius: 10px; padding: 0.55rem 0.85rem;
           color: rgba(255,255,255,0.85);
-          font-family: 'DM Sans', sans-serif;
-          font-size: 0.8rem;
-          line-height: 1.4;
-          resize: none;
-          outline: none;
-          max-height: 100px;
-          transition: border-color 0.15s;
-          caret-color: #00ff88;
+          font-family: 'DM Sans', sans-serif; font-size: 0.8rem;
+          line-height: 1.4; resize: none; outline: none;
+          max-height: 100px; transition: border-color 0.15s; caret-color: #00ff88;
         }
         .zc-textarea::placeholder { color: rgba(255,255,255,0.2); }
         .zc-textarea:focus { border-color: rgba(0,255,136,0.35); }
+
         .zc-send-btn {
-          width: 36px;
-          height: 36px;
-          border-radius: 9px;
-          border: none;
+          width: 36px; height: 36px; border-radius: 9px; border: none;
           cursor: pointer;
           background: linear-gradient(135deg, rgba(0,255,136,0.9), rgba(0,207,255,0.8));
           color: #060609;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          transition: opacity 0.15s, transform 0.15s;
-          font-size: 1rem;
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0; transition: opacity 0.15s, transform 0.15s; font-size: 1rem;
         }
         .zc-send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
         .zc-send-btn:not(:disabled):hover { transform: scale(1.08); }
         .zc-send-btn:not(:disabled):active { transform: scale(0.93); }
+
         .zc-footer-label {
           padding: 0.4rem 1rem;
-          font-family: 'Space Mono', monospace;
-          font-size: 0.5rem;
-          color: rgba(255,255,255,0.12);
-          text-align: center;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          flex-shrink: 0;
+          font-family: 'Space Mono', monospace; font-size: 0.5rem;
+          color: rgba(255,255,255,0.12); text-align: center;
+          letter-spacing: 0.06em; text-transform: uppercase; flex-shrink: 0;
         }
+
         @media (max-width: 480px) {
           .zc-panel { width: calc(100vw - 2rem); right: 1rem; bottom: 5rem; }
           .zc-bubble-btn { right: 1rem; bottom: 1rem; }
@@ -390,7 +322,7 @@ export default function AIChat() {
         }
       `}</style>
 
-            {/* Pulse ring (solo cuando cerrado) */}
+            {/* Pulse ring */}
             {!open && <div className="zc-pulse-ring" />}
 
             {/* Chat panel */}
@@ -398,7 +330,6 @@ export default function AIChat() {
                 <div className="zc-panel">
                     <div className="zc-scan-line" />
 
-                    {/* Header */}
                     <div className="zc-panel-head">
                         <div className="zc-avatar">
                             <div className="zc-avatar-inner" />
@@ -415,7 +346,6 @@ export default function AIChat() {
                         </button>
                     </div>
 
-                    {/* Messages */}
                     <div className="zc-messages">
                         {messages.map((msg, i) => (
                             <Message key={i} msg={msg} />
@@ -423,11 +353,9 @@ export default function AIChat() {
                         {loading && (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3 }}>
                 <span style={{
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontSize: '0.55rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    color: 'rgba(0,255,136,0.45)',
+                    fontFamily: "'Space Mono', monospace",
+                    fontSize: '0.55rem', textTransform: 'uppercase',
+                    letterSpacing: '0.1em', color: 'rgba(0,255,136,0.45)',
                 }}>ZARA</span>
                                 <div style={{
                                     padding: '0.6rem 0.9rem',
@@ -442,7 +370,6 @@ export default function AIChat() {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input */}
                     <div className="zc-input-area">
             <textarea
                 ref={inputRef}
@@ -464,11 +391,11 @@ export default function AIChat() {
                         </button>
                     </div>
 
-                    <div className="zc-footer-label">Powered by Claude · ZiplocSAS AI</div>
+                    <div className="zc-footer-label">Powered by Groq · ZiplocSAS AI</div>
                 </div>
             )}
 
-            {/* Bubble toggle button */}
+            {/* Bubble toggle */}
             <button
                 className="zc-bubble-btn"
                 onClick={() => setOpen(o => !o)}
