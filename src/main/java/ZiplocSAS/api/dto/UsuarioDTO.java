@@ -29,5 +29,7 @@ public class UsuarioDTO {
     private NivelUsuario nivel;
     private Integer puntosAcumulados;
     private LocalDateTime fechaRegistro;
+    private boolean activo;          // ← AGREGAR
+
 }
 

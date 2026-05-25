@@ -7,10 +7,15 @@ import {
   eliminarUsuario,
   obtenerUsuariosTopPuntos,
   obtenerUsuariosPorRangoPuntos,
+  toggleActivoUsuario,
 } from '../services/api';
 
 function normalizeUsuarios(payload) {
-  return payload?.usuarios || payload?.topUsuarios || payload?.usuario ? (Array.isArray(payload?.usuarios) ? payload.usuarios : payload?.topUsuarios || [payload.usuario].filter(Boolean)) : payload || [];
+  return payload?.usuarios || payload?.topUsuarios || payload?.usuario
+      ? (Array.isArray(payload?.usuarios)
+          ? payload.usuarios
+          : payload?.topUsuarios || [payload.usuario].filter(Boolean))
+      : payload || [];
 }
 
 export default function useUsuarios(filters = {}) {
@@ -107,5 +112,33 @@ export function useUsuariosPorRangoPuntos(minPuntos, maxPuntos) {
     queryFn: ({ signal }) => obtenerUsuariosPorRangoPuntos(minPuntos, maxPuntos, { signal }),
     enabled: Number.isFinite(minPuntos) && Number.isFinite(maxPuntos),
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+// ← NUEVO: toggle activo/inactivo con optimistic update
+export function useToggleActivoUsuario() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, activo }) => toggleActivoUsuario(id, activo),
+    onMutate: async ({ id, activo }) => {
+      await queryClient.cancelQueries({ queryKey: ['usuarios'] });
+      const previous = queryClient.getQueryData(['usuarios']);
+      // Optimistic update: cambia el valor en cache antes de que responda el servidor
+      queryClient.setQueryData(['usuarios'], (old) => {
+        if (!old) return old;
+        const update = (arr) => arr.map((u) => (u.id === id ? { ...u, activo } : u));
+        if (Array.isArray(old)) return update(old);
+        if (old?.usuarios) return { ...old, usuarios: update(old.usuarios) };
+        return old;
+      });
+      return { previous };
+    },
+    onError: (err, vars, context) => {
+      // Rollback si falla
+      if (context?.previous) queryClient.setQueryData(['usuarios'], context.previous);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+    },
   });
 }

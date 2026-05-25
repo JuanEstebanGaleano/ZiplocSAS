@@ -2,7 +2,6 @@ import apiClient from '../api/axios.js';
 import { parseApiError } from '../api/errorParser';
 
 function unwrap(payload) {
-  // apiClient interceptor already unwraps ApiResponse, but keep compatibility
   if (!payload) return null;
   if (payload && typeof payload === 'object' && 'data' in payload) return payload.data;
   return payload;
@@ -37,11 +36,7 @@ export function obtenerUsuariosTopPuntos(config) {
 export function obtenerUsuariosPorRangoPuntos(min, max, config = {}) {
   return safeRequest('get', '/usuarios/puntos/rango', undefined, {
     ...config,
-    params: {
-      min,
-      max,
-      ...(config.params || {}),
-    },
+    params: { min, max, ...(config.params || {}) },
   });
 }
 
@@ -55,6 +50,11 @@ export function actualizarUsuario(id, payload) {
 
 export function eliminarUsuario(id) {
   return safeRequest('delete', `/usuarios/${id}`);
+}
+
+// ← NUEVO: toggle activo/inactivo
+export function toggleActivoUsuario(id, activo) {
+  return safeRequest('patch', `/usuarios/${id}/activo`, undefined, { params: { activo } });
 }
 
 export function crearBilletera(payload) {
@@ -149,7 +149,6 @@ export function obtenerAuditoriaUsuario(usuarioId, config) {
   return safeRequest('get', `/analitica/auditoria/${usuarioId}`, undefined, config);
 }
 
-// ---- Agregados Billeteras ----
 export function obtenerBilleteras(config) {
   return safeRequest('get', '/billeteras', undefined, config);
 }
@@ -158,7 +157,6 @@ export function eliminarBilletera(id) {
   return safeRequest('delete', `/billeteras/${id}`);
 }
 
-// ---- Agregados Transacciones ----
 export function recargarTransaccion(payload) {
   return safeRequest('post', '/transacciones/recargar', payload);
 }

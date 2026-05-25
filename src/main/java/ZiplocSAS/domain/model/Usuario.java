@@ -36,5 +36,9 @@ public class Usuario {
     private int puntosAcumulados;
     private LocalDateTime fechaRegistro;
     private List<Billetera> wallets;
+    @Builder.Default
+    private boolean activo = true;  // ← default true para documentos sin el campo      // ← AGREGAR ESTE CAMPO
+
+
 }
 

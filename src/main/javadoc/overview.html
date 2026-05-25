@@ -1,15 +1,178 @@
 <!DOCTYPE html>
 <html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Plataforma Académica</title>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+        :root {
+            --bg: #05060f;
+            --panel: rgba(255,255,255,0.06);
+            --border: rgba(255,255,255,0.12);
+            --text: #ffffff;
+            --muted: rgba(255,255,255,0.65);
+            --accent1: #6c5ce7;
+            --accent2: #00d2ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at top, #1a1b3a, var(--bg));
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        .background-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: linear-gradient(45deg, var(--accent1), var(--accent2));
+            filter: blur(120px);
+            opacity: 0.25;
+            border-radius: 50%;
+            top: -100px;
+            left: -100px;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(30px); }
+        }
+
+        .card {
+            width: min(850px, 92%);
+            background: var(--panel);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(18px);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            position: relative;
+            z-index: 2;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, var(--accent2), var(--accent1));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(0,210,255,0.12);
+            border: 1px solid rgba(0,210,255,0.25);
+            font-size: 12px;
+            margin-bottom: 20px;
+            color: var(--muted);
+        }
+
+        p {
+            color: var(--muted);
+            line-height: 1.7;
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+
+        .grid {
+            margin-top: 25px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .box {
+            padding: 18px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: 0.3s ease;
+        }
+
+        .box:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0,210,255,0.4);
+            background: rgba(0,210,255,0.06);
+        }
+
+        .box h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .box span {
+            font-size: 12px;
+            color: var(--muted);
+        }
+    </style>
+</head>
+
 <body>
-<p>
-    Plataforma academica de billeteras digitales construida con Spring Boot y MongoDB.
-    El sistema modela usuarios, billeteras, transacciones, recompensas, alertas,
-    operaciones programadas y analitica basada en estructuras de datos.
-</p>
-<p>
-    La documentacion describe las capas principales del backend: API REST, servicios
-    de aplicacion, modelos de dominio, estructuras en memoria, persistencia MongoDB
-    e infraestructura programada.
-</p>
+
+<div class="background-glow"></div>
+
+<div class="card">
+
+    <div class="badge">ZIPLOCSAS • ACADEMIC PLATFORM • BACKEND ENGINE</div>
+
+    <h1>Plataforma Académica de Billeteras Digitales</h1>
+
+    <p>
+        Sistema construido con <b>Spring Boot</b> y <b>MongoDB</b>, diseñado para modelar
+        usuarios, billeteras digitales, transacciones seguras, recompensas dinámicas y
+        analítica basada en estructuras de datos avanzadas.
+    </p>
+
+    <p>
+        La arquitectura está organizada en capas: <b>API REST</b>, servicios de aplicación,
+        modelos de dominio, estructuras en memoria, persistencia NoSQL e infraestructura
+        programada para tareas automáticas.
+    </p>
+
+    <div class="grid">
+
+        <div class="box">
+            <h3>⚡ API REST</h3>
+            <span>Endpoints escalables y desacoplados</span>
+        </div>
+
+        <div class="box">
+            <h3>🧠 Lógica de Dominio</h3>
+            <span>Modelado orientado a eventos y entidades</span>
+        </div>
+
+        <div class="box">
+            <h3>🗄 MongoDB</h3>
+            <span>Persistencia flexible NoSQL</span>
+        </div>
+
+        <div class="box">
+            <h3>📊 Analítica</h3>
+            <span>Estructuras de datos y métricas</span>
+        </div>
+
+    </div>
+
+</div>
+
 </body>
 </html>
