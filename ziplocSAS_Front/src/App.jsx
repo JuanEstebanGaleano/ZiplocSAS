@@ -8,6 +8,7 @@ import Recompensas from './pages/Recompensas';
 import Notificaciones from './pages/Notificaciones';
 import OperacionesProgramadas from './pages/OperacionesProgramadas';
 import Usuarios from './pages/Usuarios';
+import AIChat from './components/AIChat';
 import { useAuth } from './auth/AuthContext';
 
 const VIEW_TITLES = {
@@ -31,14 +32,15 @@ export default function App() {
 
   function renderView() {
     switch (activeView) {
-      case 'billeteras':   return <Billeteras {...sharedProps} />;
-      case 'transacciones':return <Transacciones {...sharedProps} />;
-      case 'analitica':    return <Analitica {...sharedProps} />;
-      case 'recompensas':  return <Recompensas {...sharedProps} />;
-      case 'usuarios':     return <Usuarios {...sharedProps} />;
+      case 'billeteras':     return <Billeteras {...sharedProps} />;
+      case 'transacciones':  return <Transacciones {...sharedProps} />;
+      case 'analitica':      return <Analitica {...sharedProps} />;
+      case 'recompensas':    return <Recompensas {...sharedProps} />;
+      case 'usuarios':       return <Usuarios {...sharedProps} />;
       case 'notificaciones': return <Notificaciones {...sharedProps} />;
-      case 'programadas':  return <OperacionesProgramadas {...sharedProps} />;
-      case 'dashboard': default: return <Dashboard {...sharedProps} />;
+      case 'programadas':    return <OperacionesProgramadas {...sharedProps} />;
+      case 'dashboard':
+      default:               return <Dashboard {...sharedProps} />;
     }
   }
 
@@ -276,6 +278,9 @@ export default function App() {
             </div>
           </main>
         </div>
+
+        {/* ── Asistente IA flotante ── */}
+        <AIChat />
       </>
   );
 }

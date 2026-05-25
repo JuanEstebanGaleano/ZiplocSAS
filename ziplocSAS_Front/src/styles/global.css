@@ -9,28 +9,62 @@
     min-height: 100vh;
     margin: 0;
     padding: 0;
-    background-color: theme('colors.fondo');
+
+    /* Fondo con degradado dinámico */
+    background: radial-gradient(circle at top, theme('colors.fondo') 0%, #05070f 100%);
     color: theme('colors.textoPrincipal');
+
     font-family: theme('fontFamily.sans');
+
+    /* suavidad general */
+    scroll-behavior: smooth;
   }
 
-  /* Scrollbar personalizado */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  ::-webkit-scrollbar-track {
-    background: theme('colors.borde');
-  }
-  ::-webkit-scrollbar-thumb {
+  /* selección de texto pro */
+  ::selection {
     background: theme('colors.acento');
-    border-radius: theme('borderRadius.md');
+    color: black;
   }
+
+  /* Scrollbar estilo premium */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+            180deg,
+            theme('colors.acento'),
+            theme('colors.acentoHover')
+    );
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
   ::-webkit-scrollbar-thumb:hover {
     background: theme('colors.acentoHover');
   }
 
-  /* Select reset */
+  /* Inputs modernos */
+  input,
+  select,
+  textarea {
+    outline: none;
+    transition: all 0.25s ease;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  }
+
   select {
     appearance: none;
     -webkit-appearance: none;
@@ -38,22 +72,113 @@
   }
 }
 
-@layer utilities {
+/* ===============================
+   COMPONENTES PREMIUM
+================================= */
+@layer components {
+
+  /* 🔮 Glass Card ultra moderno */
   .glass-panel {
-    background-color: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
+    box-shadow:
+            0 10px 40px rgba(0, 0, 0, 0.35),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+    border-radius: 16px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .glass-panel:hover {
+    transform: translateY(-4px);
+    box-shadow:
+            0 18px 60px rgba(0, 0, 0, 0.5),
+            0 0 20px rgba(99, 102, 241, 0.15);
+  }
+
+  /* 🚀 Botón principal brutal */
+  .btn-primary {
+    background: linear-gradient(135deg, theme('colors.acento'), #7c3aed);
+    color: white;
+    padding: 0.65rem 1.2rem;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.25s ease;
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 12px 35px rgba(99, 102, 241, 0.45);
+  }
+
+  /* 🧊 Panel oscuro premium */
+  .panel-dark {
+    background: rgba(15, 15, 25, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    backdrop-filter: blur(10px);
+  }
+
+  /* 📊 Card con glow sutil */
+  .card-glow {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-glow::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(120deg, transparent, rgba(99,102,241,0.25), transparent);
+    animation: glowMove 3s linear infinite;
   }
 }
 
-/* Tooltip arrow pseudo-element */
+/* ===============================
+   UTILIDADES
+================================= */
+@layer utilities {
+
+  .text-gradient {
+    background: linear-gradient(90deg, #60a5fa, #a78bfa, #22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .soft-shadow {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+
+  .hover-lift {
+    transition: transform 0.25s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-3px);
+  }
+}
+
+/* ✨ Animaciones */
+@keyframes glowMove {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Tooltip mejorado */
 .tooltip-arrow::before {
   content: '';
   position: absolute;
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border-width: 4px;
+  border-width: 6px;
   border-style: solid;
-  border-color: theme('colors.textoPrincipal') transparent transparent transparent;
+  border-color: rgba(255,255,255,0.08) transparent transparent transparent;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
 }

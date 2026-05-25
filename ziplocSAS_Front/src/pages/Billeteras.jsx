@@ -4,350 +4,447 @@ import AlertaPanel from '../components/AlertaPanel';
 import { useBilleteras, useCrearBilletera, useActualizarBilletera } from '../hooks/useBilleteras';
 import { useTransacciones } from '../hooks/useTransacciones';
 
-const TIPOS_BILLETERA = [
-  { label: "Ahorro", value: "AHORRO" },
-  { label: "Ahorros", value: "AHORROS" },
-  { label: "Gastos diarios", value: "GASTOS_DIARIOS" },
-  { label: "Compras", value: "COMPRAS" },
-  { label: "Transporte", value: "TRANSPORTE" },
-  { label: "Corriente", value: "CORRIENTE" },
-  { label: "Inversión", value: "INVERSION" },
-  { label: "Crédito", value: "CREDITO" }
+const TIPOS = [
+  { label: 'Ahorro', value: 'AHORRO' }, { label: 'Ahorros', value: 'AHORROS' },
+  { label: 'Gastos diarios', value: 'GASTOS_DIARIOS' }, { label: 'Compras', value: 'COMPRAS' },
+  { label: 'Transporte', value: 'TRANSPORTE' }, { label: 'Corriente', value: 'CORRIENTE' },
+  { label: 'Inversión', value: 'INVERSION' }, { label: 'Crédito', value: 'CREDITO' },
 ];
 
-const ESTADOS_BILLETERA = [
-  { label: "Activa", value: "ACTIVA" },
-  { label: "Suspendida", value: "SUSPENDIDA" },
-  { label: "Congelada", value: "CONGELADA" },
-  { label: "Cerrada", value: "CERRADA" }
+const ESTADOS = [
+  { label: 'Activa', value: 'ACTIVA' }, { label: 'Suspendida', value: 'SUSPENDIDA' },
+  { label: 'Congelada', value: 'CONGELADA' }, { label: 'Cerrada', value: 'CERRADA' },
 ];
 
-function initialCreateForm() {
-  return { nombre: '', tipo: TIPOS_BILLETERA[0].value };
+const fmt = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+function estadoStyle(estado) {
+  const v = String(estado || '').toUpperCase();
+  if (v === 'ACTIVA') return { color: '#00ff88', border: 'rgba(0,255,136,0.25)', bg: 'rgba(0,255,136,0.08)' };
+  if (v === 'SUSPENDIDA') return { color: '#ffb020', border: 'rgba(255,176,32,0.25)', bg: 'rgba(255,176,32,0.08)' };
+  if (v === 'CONGELADA') return { color: '#00cfff', border: 'rgba(0,207,255,0.25)', bg: 'rgba(0,207,255,0.08)' };
+  return { color: '#666', border: 'rgba(255,255,255,0.1)', bg: 'rgba(255,255,255,0.04)' };
 }
 
-function initialEditForm() {
-  return { nombre: '', estado: ESTADOS_BILLETERA[0].value };
+function validateCreate(f) {
+  const e = {};
+  if (!f.nombre.trim()) e.nombre = 'El nombre es obligatorio.';
+  if (!f.tipo) e.tipo = 'Selecciona un tipo.';
+  return e;
 }
 
-function validateCreateForm(form) {
-  const nextErrors = {};
-  if (!form.nombre.trim()) nextErrors.nombre = 'El nombre es obligatorio.';
-  if (!form.tipo) nextErrors.tipo = 'Selecciona un tipo de billetera.';
-  return nextErrors;
-}
-
-function validateEditForm(form) {
-  const nextErrors = {};
-  if (!form.nombre.trim()) nextErrors.nombre = 'El nombre no puede estar vacío.';
-  if (!form.estado) nextErrors.estado = 'Selecciona un estado.';
-  return nextErrors;
+function validateEdit(f) {
+  const e = {};
+  if (!f.nombre.trim()) e.nombre = 'El nombre no puede estar vacío.';
+  if (!f.estado) e.estado = 'Selecciona un estado.';
+  return e;
 }
 
 export default function Billeteras({ userId }) {
-  // Hooks de React Query
   const billeterasQuery = useBilleteras(userId);
-  const createMutation = useCrearBilletera();
-  const updateMutation = useActualizarBilletera();
+  const createMut = useCrearBilletera();
+  const updateMut = useActualizarBilletera();
 
-  // Estado local
   const [selectedWallet, setSelectedWallet] = useState(null);
-  const [loadingHistory, setLoadingHistory] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [createForm, setCreateForm] = useState(initialCreateForm());
-  const [createErrors, setCreateErrors] = useState({});
   const [editId, setEditId] = useState(null);
-  const [editForm, setEditForm] = useState(initialEditForm());
+  const [createForm, setCreateForm] = useState({ nombre: '', tipo: TIPOS[0].value });
+  const [createErrors, setCreateErrors] = useState({});
+  const [editForm, setEditForm] = useState({ nombre: '', estado: ESTADOS[0].value });
   const [editErrors, setEditErrors] = useState({});
 
-  // Get billeteras (normalize response)
   const billeteras = billeterasQuery.data?.billeteras || billeterasQuery.data || [];
+  const transQuery = useTransacciones(selectedWallet?.id);
+  const history = transQuery.data?.transacciones || transQuery.data || [];
 
-  // Load transacciones para billetera seleccionada
-  const transaccionesQuery = useTransacciones(selectedWallet?.id);
-  const history = transaccionesQuery.data?.transacciones || transaccionesQuery.data || [];
-
-  // Set first wallet as selected when billeteras load
   useEffect(() => {
-    if (billeteras.length && !selectedWallet) {
-      setSelectedWallet(billeteras[0]);
-    }
+    if (billeteras.length && !selectedWallet) setSelectedWallet(billeteras[0]);
   }, [billeteras]);
 
-  function handleCreateChange(event) {
-    const { name, value } = event.target;
-    setCreateForm(current => ({ ...current, [name]: value }));
-    setCreateErrors(current => ({ ...current, [name]: '' }));
-  }
-
-  function handleEditChange(event) {
-    const { name, value } = event.target;
-    setEditForm(current => ({ ...current, [name]: value }));
-    setEditErrors(current => ({ ...current, [name]: '' }));
-  }
-
-  function handleSelect(wallet) {
-    setSelectedWallet(wallet);
-    setSuccess('');
-    setError('');
-  }
-
-  function handleEdit(wallet) {
-    setEditId(wallet.id);
-    setEditForm({ nombre: wallet.nombre || '', estado: wallet.estado || 'ACTIVA' });
-    setEditErrors({});
-    setSuccess('');
-    setError('');
-  }
-
-  async function handleCreateSubmit(event) {
-    event.preventDefault();
-    const nextErrors = validateCreateForm(createForm);
-    setCreateErrors(nextErrors);
-    if (Object.keys(nextErrors).length) return;
-
+  async function handleCreate(e) {
+    e.preventDefault();
+    const errs = validateCreate(createForm);
+    setCreateErrors(errs);
+    if (Object.keys(errs).length) return;
     try {
-      await createMutation.mutateAsync({
-        usuarioId: userId,
-        nombre: createForm.nombre.trim(),
-        tipo: createForm.tipo,
-      });
-      setCreateForm(initialCreateForm());
-    } catch (err) {
-      // Error handled by mutation
-    }
+      await createMut.mutateAsync({ usuarioId: userId, nombre: createForm.nombre.trim(), tipo: createForm.tipo });
+      setCreateForm({ nombre: '', tipo: TIPOS[0].value });
+    } catch {}
   }
 
-  async function handleEditSubmit(event) {
-    event.preventDefault();
+  async function handleEdit(e) {
+    e.preventDefault();
     if (!editId) return;
-
-    const nextErrors = validateEditForm(editForm);
-    setEditErrors(nextErrors);
-    if (Object.keys(nextErrors).length) return;
-
+    const errs = validateEdit(editForm);
+    setEditErrors(errs);
+    if (Object.keys(errs).length) return;
     try {
-      await updateMutation.mutateAsync({
-        id: editId,
-        data: {
-          nombre: editForm.nombre.trim(),
-          estado: editForm.estado,
-        },
-      });
+      await updateMut.mutateAsync({ id: editId, data: { nombre: editForm.nombre.trim(), estado: editForm.estado } });
       setEditId(null);
-      setEditForm(initialEditForm());
-      // Refresh selected wallet
-      const updatedWallet = billeteras.find(w => w.id === editId);
-      if (updatedWallet) setSelectedWallet(updatedWallet);
-    } catch (err) {
-      // Error handled by mutation
-    }
+      setEditForm({ nombre: '', estado: ESTADOS[0].value });
+    } catch {}
   }
 
-  const inputStyles = "w-full p-3 bg-transparent border border-borde rounded-md text-textoPrincipal outline-none transition-all duration-150 focus:border-acento focus:ring-[3px] focus:ring-[#C47A44]/10 disabled:opacity-50 disabled:cursor-not-allowed";
+  function startEdit(w) {
+    setEditId(w.id);
+    setEditForm({ nombre: w.nombre || '', estado: w.estado || 'ACTIVA' });
+    setEditErrors({});
+  }
+
+  const globalError = billeterasQuery.error || createMut.error || updateMut.error;
+  const globalSuccess = createMut.isSuccess ? 'Billetera creada.' : updateMut.isSuccess ? 'Billetera actualizada.' : '';
 
   return (
-    <section className="flex flex-col lg:flex-row gap-6 items-start relative">
-      {(billeterasQuery.error || createMutation.error || updateMutation.error) && (
-        <div className="absolute top-0 right-0 w-full lg:w-auto z-10">
-          <AlertaPanel type="error" title="Atención" message={(billeterasQuery.error || createMutation.error || updateMutation.error)?.message || 'Error al procesar operación'} />
-        </div>
-      )}
-      {(createMutation.isSuccess || updateMutation.isSuccess) && (
-        <div className="absolute top-0 right-0 w-full lg:w-auto z-10">
-          <AlertaPanel type="success" title="Operación exitosa" message={createMutation.isSuccess ? 'Billetera creada correctamente' : 'Billetera actualizada correctamente'} />
-        </div>
-      )}
-      {billeterasQuery.isLoading ? (
-        <div className="w-full flex justify-center py-10"><LoadingSpinner /></div>
-      ) : (
-        <>
-          {/* Panel Izquierdo: Formularios (Ancho fijo 320px) */}
-          <div className="w-full lg:w-[360px] shrink-0 flex flex-col gap-5">
-            <div className="glass-panel p-6 rounded-md shadow-flotante border border-borde">
-              <div className="flex justify-between items-baseline mb-4">
-                <h2 className="text-lg font-semibold text-textoPrincipal">Nueva billetera</h2>
+      <>
+        <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@600;700&family=Inter:wght@300;400;500&display=swap');
+
+        :root {
+          --fm: 'Space Mono', monospace;
+          --fd: 'Orbitron', sans-serif;
+          --fb: 'Inter', sans-serif;
+          --g: #00ff88; --gd: rgba(0,255,136,0.55); --gm: rgba(0,255,136,0.09); --gb: rgba(0,255,136,0.2);
+          --c: #00cfff; --r: #ff3355; --a: #ffb020;
+          --bg: #060609; --sf: rgba(255,255,255,0.026); --sfh: rgba(0,255,136,0.03);
+          --bd: rgba(255,255,255,0.055); --bda: rgba(0,255,136,0.2);
+          --t: rgba(255,255,255,0.88); --td: rgba(255,255,255,0.38); --tf: rgba(255,255,255,0.14);
+        }
+
+        .bl-root { font-family: var(--fb); background: var(--bg); min-height: 100vh; position: relative; }
+
+        .bl-atmo {
+          position: fixed; inset: 0; z-index: 0; pointer-events: none;
+          background:
+            radial-gradient(ellipse 50% 40% at 5% 5%, rgba(0,207,255,0.06) 0%, transparent 55%),
+            radial-gradient(ellipse 40% 35% at 95% 90%, rgba(0,255,136,0.05) 0%, transparent 55%);
+        }
+
+        .bl-scan {
+          position: fixed; inset: 0; z-index: 0; pointer-events: none;
+          background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.14) 2px, rgba(0,0,0,0.14) 4px);
+          opacity: 0.28;
+        }
+
+        .bl-layout { position: relative; z-index: 1; display: flex; gap: 1.25rem; align-items: flex-start; }
+        @media (max-width: 1024px) { .bl-layout { flex-direction: column; } }
+
+        /* ── Shared panel ── */
+        .bl-panel {
+          background: var(--sf); border: 1px solid var(--bd);
+          border-radius: 12px; overflow: hidden;
+          display: flex; flex-direction: column;
+        }
+
+        .bl-panel.accent { border-color: var(--bda); }
+
+        .bl-head {
+          padding: 0.9rem 1.25rem; border-bottom: 1px solid var(--bd);
+          display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+        }
+
+        .bl-title {
+          font-family: var(--fm); font-size: 0.62rem; text-transform: uppercase;
+          letter-spacing: 0.12em; color: var(--gd);
+          display: flex; align-items: center; gap: 0.4rem;
+        }
+
+        .bl-title::before { content: '//'; color: var(--tf); }
+
+        .bl-badge {
+          font-family: var(--fm); font-size: 0.55rem; color: var(--tf);
+          text-transform: uppercase; letter-spacing: 0.1em;
+          padding: 0.18rem 0.55rem; border: 1px solid var(--bd); border-radius: 4px;
+        }
+
+        .bl-body { padding: 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.9rem; }
+
+        /* ── Fields ── */
+        .bl-field { display: flex; flex-direction: column; gap: 0.35rem; }
+
+        .bl-label {
+          font-family: var(--fm); font-size: 0.58rem; text-transform: uppercase;
+          letter-spacing: 0.1em; color: var(--tf);
+        }
+
+        .bl-input {
+          width: 100%; padding: 0.6rem 0.8rem;
+          background: rgba(0,0,0,0.35); border: 1px solid var(--bd);
+          border-radius: 6px; color: var(--t); font-family: var(--fm); font-size: 0.76rem;
+          outline: none; transition: border-color 0.15s, box-shadow 0.15s; appearance: none;
+        }
+
+        .bl-input:focus { border-color: var(--gb); box-shadow: 0 0 0 3px rgba(0,255,136,0.07); }
+        .bl-input.err { border-color: var(--r); }
+        .bl-input:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        .bl-error { font-family: var(--fm); font-size: 0.57rem; color: var(--r); }
+
+        .bl-btn {
+          width: 100%; padding: 0.75rem;
+          background: transparent; border: 1px solid var(--gb);
+          color: var(--g); font-family: var(--fm); font-size: 0.65rem;
+          font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+          border-radius: 6px; cursor: pointer; overflow: hidden; position: relative;
+          transition: background 0.15s;
+        }
+
+        .bl-btn:hover { background: var(--gm); }
+        .bl-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .bl-btn.secondary { border-color: var(--bda); color: var(--c); }
+        .bl-btn.secondary:hover { background: rgba(0,207,255,0.07); }
+
+        /* ── Wallet cards ── */
+        .bl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.85rem; }
+
+        .bl-wcard {
+          background: rgba(0,0,0,0.2); border: 1px solid var(--bd);
+          border-radius: 10px; padding: 1.1rem 1.25rem;
+          cursor: pointer; position: relative; overflow: hidden;
+          transition: border-color 0.15s, background 0.15s;
+          display: flex; flex-direction: column; gap: 0.75rem;
+        }
+
+        .bl-wcard::before {
+          content: '';
+          position: absolute; top: 0; left: 0; right: 0; height: 1px;
+          background: linear-gradient(90deg, transparent, var(--g), transparent);
+          opacity: 0; transition: opacity 0.3s;
+        }
+
+        .bl-wcard:hover { border-color: var(--bda); background: rgba(0,255,136,0.025); }
+        .bl-wcard:hover::before { opacity: 1; }
+        .bl-wcard.selected { border-color: var(--bda); background: rgba(0,255,136,0.04); }
+        .bl-wcard.selected::before { opacity: 1; }
+
+        .bl-wcard-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+
+        .bl-wcard-name { font-size: 0.88rem; font-weight: 600; color: var(--t); }
+
+        .bl-wcard-tipo { font-family: var(--fm); font-size: 0.6rem; color: var(--tf); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+
+        .bl-estado-pill {
+          font-family: var(--fm); font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.06em;
+          padding: 0.18rem 0.55rem; border-radius: 4px; border: 1px solid; white-space: nowrap; flex-shrink: 0;
+        }
+
+        .bl-wcard-saldo {
+          font-family: var(--fd); font-size: 1.3rem; font-weight: 700;
+          color: var(--g); letter-spacing: -0.02em; line-height: 1;
+        }
+
+        .bl-wcard-footer {
+          display: flex; align-items: center; justify-content: space-between;
+          border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.65rem;
+          margin-top: 0.1rem;
+        }
+
+        .bl-btn-edit {
+          background: none; border: 1px solid rgba(0,207,255,0.2);
+          color: rgba(0,207,255,0.6); font-family: var(--fm); font-size: 0.55rem;
+          text-transform: uppercase; letter-spacing: 0.06em;
+          padding: 0.2rem 0.6rem; border-radius: 4px; cursor: pointer;
+          transition: background 0.15s, color 0.15s;
+        }
+
+        .bl-btn-edit:hover { background: rgba(0,207,255,0.08); color: var(--c); }
+
+        /* ── History table ── */
+        .bl-table-head {
+          display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr;
+          gap: 0.75rem; padding: 0.6rem 1.25rem;
+          background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--bd);
+          font-family: var(--fm); font-size: 0.55rem; text-transform: uppercase;
+          letter-spacing: 0.1em; color: var(--tf);
+        }
+
+        .bl-table-row {
+          display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr;
+          gap: 0.75rem; align-items: center;
+          padding: 0.8rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.03);
+          transition: background 0.12s;
+        }
+
+        .bl-table-row:last-child { border-bottom: none; }
+        .bl-table-row:hover { background: var(--sfh); }
+
+        .bl-empty {
+          padding: 2.5rem 1.25rem; text-align: center;
+          font-family: var(--fm); font-size: 0.68rem; color: var(--tf);
+        }
+
+        /* Sidebar width */
+        .bl-left { width: 300px; min-width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 1.25rem; }
+        .bl-right { flex: 1; display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+
+        @media (max-width: 1024px) { .bl-left, .bl-right { width: 100%; min-width: unset; } }
+      `}</style>
+
+        <div className="bl-root">
+          <div className="bl-atmo" />
+          <div className="bl-scan" />
+
+          {globalError && (
+              <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 20 }}>
+                <AlertaPanel type="error" title="Error" message={globalError?.message || 'Error'} />
               </div>
-              <form className="flex flex-col gap-4" onSubmit={handleCreateSubmit} noValidate>
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="nombre" className="text-sm font-medium text-textoSecundario">Nombre</label>
-                  <input
-                    id="nombre"
-                    name="nombre"
-                    className={`${inputStyles} ${createErrors.nombre ? 'border-error focus:border-error focus:ring-[#B13E3E]/10' : ''}`}
-                    value={createForm.nombre}
-                    onChange={handleCreateChange}
-                    placeholder="Ej. Ahorro principal"
-                    disabled={createMutation.isPending}
-                  />
-                  {createErrors.nombre && <span className="text-xs text-error">{createErrors.nombre}</span>}
-                </div>
+          )}
+          {globalSuccess && (
+              <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 20 }}>
+                <AlertaPanel type="success" title="Listo" message={globalSuccess} />
+              </div>
+          )}
 
-                <div className="flex flex-col gap-2 relative">
-                  <label htmlFor="tipo" className="text-sm font-medium text-textoSecundario">Tipo</label>
-                  <div className="relative">
-                    <select
-                      id="tipo"
-                      name="tipo"
-                      className={`${inputStyles} appearance-none pr-10 ${createErrors.tipo ? 'border-error focus:border-error focus:ring-[#B13E3E]/10' : ''}`}
-                      value={createForm.tipo}
-                      onChange={handleCreateChange}
-                      disabled={createMutation.isPending}
-                    >
-                      {TIPOS_BILLETERA.map(tipo => <option key={tipo.value} value={tipo.value}>{tipo.label}</option>)}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-textoSecundario">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+          {billeterasQuery.isLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem 0', position: 'relative', zIndex: 1 }}>
+                <LoadingSpinner />
+              </div>
+          ) : (
+              <div className="bl-layout">
+
+                {/* ── Left: forms ── */}
+                <div className="bl-left">
+
+                  {/* Crear */}
+                  <div className="bl-panel accent">
+                    <div className="bl-head">
+                      <span className="bl-title">Nueva billetera</span>
+                      <span className="bl-badge">Create</span>
                     </div>
-                  </div>
-                  {createErrors.tipo && <span className="text-xs text-error">{createErrors.tipo}</span>}
-                </div>
-
-                <button type="submit" className="w-full py-3 px-4 bg-acento text-superficie font-medium rounded-md hover:bg-gradient-to-r hover:from-[#C47A44] hover:to-[#B86A38] transition-all duration-150 active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Guardando...' : 'Crear billetera'}
-                </button>
-              </form>
-            </div>
-
-            {selectedWallet && (
-              <div className="glass-panel p-6 rounded-md shadow-flotante border border-borde">
-                <div className="flex justify-between items-baseline mb-4">
-                  <h2 className="text-lg font-semibold text-textoPrincipal">Editar billetera</h2>
-                </div>
-                {!editId && (
-                  <p className="text-sm text-textoSecundario mb-4">Selecciona una billetera de la lista para habilitar la edicion.</p>
-                )}
-                <form className="flex flex-col gap-4" onSubmit={handleEditSubmit} noValidate>
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="editNombre" className="text-sm font-medium text-textoSecundario">Nombre</label>
-                    <input
-                      id="editNombre"
-                      name="nombre"
-                      className={`${inputStyles} ${editErrors.nombre ? 'border-error focus:border-error focus:ring-[#B13E3E]/10' : ''}`}
-                      value={editForm.nombre}
-                      onChange={handleEditChange}
-                      placeholder="Nuevo nombre"
-                      disabled={updateMutation.isPending || !editId}
-                    />
-                    {editErrors.nombre && <span className="text-xs text-error">{editErrors.nombre}</span>}
-                  </div>
-
-                  <div className="flex flex-col gap-2 relative">
-                    <label htmlFor="estado" className="text-sm font-medium text-textoSecundario">Estado</label>
-                    <div className="relative">
-                      <select
-                        id="estado"
-                        name="estado"
-                        className={`${inputStyles} appearance-none pr-10 ${editErrors.estado ? 'border-error focus:border-error focus:ring-[#B13E3E]/10' : ''}`}
-                        value={editForm.estado}
-                        onChange={handleEditChange}
-                        disabled={updateMutation.isPending || !editId}
-                      >
-                        {ESTADOS_BILLETERA.map(est => <option key={est.value} value={est.value}>{est.label}</option>)}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-textoSecundario">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                    <div className="bl-body">
+                      <div className="bl-field">
+                        <label className="bl-label">Nombre</label>
+                        <input className={`bl-input ${createErrors.nombre ? 'err' : ''}`} placeholder="Ej. Ahorro principal" value={createForm.nombre} onChange={e => setCreateForm(c => ({...c, nombre: e.target.value}))} disabled={createMut.isPending} />
+                        {createErrors.nombre && <span className="bl-error">{createErrors.nombre}</span>}
                       </div>
+                      <div className="bl-field">
+                        <label className="bl-label">Tipo</label>
+                        <select className={`bl-input ${createErrors.tipo ? 'err' : ''}`} value={createForm.tipo} onChange={e => setCreateForm(c => ({...c, tipo: e.target.value}))} disabled={createMut.isPending}>
+                          {TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                        </select>
+                        {createErrors.tipo && <span className="bl-error">{createErrors.tipo}</span>}
+                      </div>
+                      <button className="bl-btn" onClick={handleCreate} disabled={createMut.isPending}>
+                        {createMut.isPending ? 'Guardando…' : 'Crear billetera →'}
+                      </button>
                     </div>
-                    {editErrors.estado && <span className="text-xs text-error">{editErrors.estado}</span>}
                   </div>
 
-                  <button type="submit" className="w-full py-3 px-4 bg-superficie border border-borde text-textoPrincipal font-medium rounded-md hover:bg-textoSecundario hover:text-superficie transition-all duration-150 active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed" disabled={updateMutation.isPending || !editId}>
-                    {updateMutation.isPending ? 'Guardando...' : 'Guardar cambios'}
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
+                  {/* Editar */}
+                  <div className="bl-panel">
+                    <div className="bl-head">
+                      <span className="bl-title">Editar billetera</span>
+                      <span className="bl-badge">Update</span>
+                    </div>
+                    <div className="bl-body">
+                      {!editId && (
+                          <p style={{ fontFamily: 'var(--fm)', fontSize: '0.65rem', color: 'var(--tf)', lineHeight: 1.6 }}>
+                            Selecciona una billetera de la lista para editar.
+                          </p>
+                      )}
+                      <div className="bl-field">
+                        <label className="bl-label">Nombre</label>
+                        <input className={`bl-input ${editErrors.nombre ? 'err' : ''}`} placeholder="Nuevo nombre" value={editForm.nombre} onChange={e => setEditForm(c => ({...c, nombre: e.target.value}))} disabled={updateMut.isPending || !editId} />
+                        {editErrors.nombre && <span className="bl-error">{editErrors.nombre}</span>}
+                      </div>
+                      <div className="bl-field">
+                        <label className="bl-label">Estado</label>
+                        <select className={`bl-input ${editErrors.estado ? 'err' : ''}`} value={editForm.estado} onChange={e => setEditForm(c => ({...c, estado: e.target.value}))} disabled={updateMut.isPending || !editId}>
+                          {ESTADOS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                        {editErrors.estado && <span className="bl-error">{editErrors.estado}</span>}
+                      </div>
+                      <button className="bl-btn secondary" onClick={handleEdit} disabled={updateMut.isPending || !editId}>
+                        {updateMut.isPending ? 'Guardando…' : 'Guardar cambios →'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
-          {/* Panel Derecho: Listados */}
-          <div className="flex-1 flex flex-col gap-5 min-w-0">
-            <div className="bg-superficie p-6 rounded-md shadow-sutil border border-borde">
-              <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
-                <h2 className="text-lg font-semibold text-textoPrincipal">Billeteras del usuario</h2>
-                <span className="text-xs uppercase tracking-wider text-textoSecundario">{billeteras.length} registros</span>
-              </div>
+                {/* ── Right ── */}
+                <div className="bl-right">
 
-              {billeteras.length ? (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  {billeteras.map(wallet => {
-                    const isSelected = selectedWallet?.id === wallet.id;
-                    return (
-                      <article
-                        key={wallet.id}
-                        className={`p-4 border-b-2 transition-all duration-150 cursor-pointer rounded-t-md hover:bg-[#F8F6F2]
-                          ${isSelected ? 'border-b-acento bg-[#F8F6F2]' : 'border-b-borde'}`}
-                        onClick={() => handleSelect(wallet)}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h3 className="font-semibold text-textoPrincipal">{wallet.nombre}</h3>
-                            <p className="text-sm text-textoSecundario">{TIPOS_BILLETERA.find(t => t.value === wallet.tipo)?.label || wallet.tipo}</p>
+                  {/* Wallet cards */}
+                  <div className="bl-panel">
+                    <div className="bl-head">
+                      <span className="bl-title">Billeteras del usuario</span>
+                      <span className="bl-badge">{billeteras.length} registros</span>
+                    </div>
+                    <div style={{ padding: '1.25rem' }}>
+                      {billeteras.length ? (
+                          <div className="bl-grid">
+                            {billeteras.map(w => {
+                              const est = estadoStyle(w.estado);
+                              const isSelected = selectedWallet?.id === w.id;
+                              return (
+                                  <div key={w.id} className={`bl-wcard ${isSelected ? 'selected' : ''}`} onClick={() => setSelectedWallet(w)}>
+                                    <div className="bl-wcard-top">
+                                      <div>
+                                        <div className="bl-wcard-name">{w.nombre}</div>
+                                        <div className="bl-wcard-tipo">{TIPOS.find(t => t.value === w.tipo)?.label || w.tipo}</div>
+                                      </div>
+                                      <span className="bl-estado-pill" style={{ color: est.color, borderColor: est.border, background: est.bg }}>
+                                {ESTADOS.find(s => s.value === w.estado)?.label || w.estado}
+                              </span>
+                                    </div>
+                                    <div className="bl-wcard-saldo">$ {fmt.format(Number(w.saldo || 0))}</div>
+                                    <div className="bl-wcard-footer">
+                              <span style={{ fontFamily: 'var(--fm)', fontSize: '0.58rem', color: 'var(--tf)' }}>
+                                ID {String(w.id).slice(0, 8)}…
+                              </span>
+                                      <button className="bl-btn-edit" onClick={e => { e.stopPropagation(); startEdit(w); }}>
+                                        Editar
+                                      </button>
+                                    </div>
+                                  </div>
+                              );
+                            })}
                           </div>
-                          <span className={`text-xs px-2 py-1 rounded ${wallet.estado === 'ACTIVA' ? 'bg-exito/10 text-exito' : 'bg-textoSecundario/10 text-textoSecundario'}`}>
-                            {ESTADOS_BILLETERA.find(e => e.value === wallet.estado)?.label || wallet.estado}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-end mt-4">
-                          <strong className="text-xl font-bold text-textoPrincipal">$ {Number(wallet.saldo || 0).toLocaleString('es-CO')}</strong>
-                          <button
-                            type="button"
-                            className="text-xs font-medium text-acento hover:text-acentoHover transition-colors"
-                            onClick={(e) => { e.stopPropagation(); handleEdit(wallet); }}
-                          >
-                            Editar
-                          </button>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="border border-dashed border-borde rounded-md p-5 bg-fondo flex flex-col gap-2">
-                  <p className="text-sm text-textoSecundario">Aun no tienes billeteras creadas.</p>
-                  <p className="text-xs text-textoSecundario">Crea una billetera en el panel izquierdo para comenzar.</p>
-                </div>
-              )}
-            </div>
-
-            {selectedWallet && (
-              <div className="bg-superficie p-6 rounded-md shadow-sutil border border-borde">
-                <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
-                  <h2 className="text-lg font-semibold text-textoPrincipal">Historial ({selectedWallet.nombre})</h2>
-                  <span className="text-xs uppercase tracking-wider text-textoSecundario">{transaccionesQuery.isLoading ? 'Actualizando...' : 'Últimos movimientos'}</span>
-                </div>
-
-                {transaccionesQuery.isLoading ? (
-                  <div className="py-8 flex justify-center"><LoadingSpinner /></div>
-                ) : history.length ? (
-                  <div className="flex flex-col">
-                    <div className="grid grid-cols-4 gap-4 pb-3 mb-2 border-b border-borde text-xs uppercase tracking-wider text-textoSecundario font-semibold">
-                      <div className="col-span-1">Tipo</div>
-                      <div className="col-span-1">Monto</div>
-                      <div className="col-span-1">Estado</div>
-                      <div className="col-span-1">Fecha</div>
+                      ) : (
+                          <div className="bl-empty">Sin billeteras. Crea una desde el panel izquierdo.</div>
+                      )}
                     </div>
-                    {history.map(transaccion => (
-                      <div key={transaccion.id} className="grid grid-cols-4 gap-4 items-center py-4 border-b border-borde last:border-b-0 hover:bg-fondo transition-colors duration-150 px-2 -mx-2 rounded">
-                        <div className="font-medium text-textoPrincipal">{transaccion.tipo}</div>
-                        <div className="text-base font-bold text-textoPrincipal">$ {Number(transaccion.valor || 0).toLocaleString('es-CO')}</div>
-                        <div className="text-sm text-textoSecundario">{transaccion.estado}</div>
-                        <div className="text-sm text-textoSecundario">{transaccion.fecha || 'Sin fecha'}</div>
+                  </div>
+
+                  {/* Historial */}
+                  {selectedWallet && (
+                      <div className="bl-panel">
+                        <div className="bl-head">
+                          <span className="bl-title">Historial — {selectedWallet.nombre}</span>
+                          <span className="bl-badge">{transQuery.isLoading ? 'Cargando…' : 'Movimientos'}</span>
+                        </div>
+                        {transQuery.isLoading ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}><LoadingSpinner /></div>
+                        ) : history.length ? (
+                            <>
+                              <div className="bl-table-head">
+                                <span>Tipo</span><span>Monto</span><span>Estado</span><span>Fecha</span>
+                              </div>
+                              {history.map(tx => {
+                                const est = estadoStyle(tx.estado);
+                                return (
+                                    <div key={tx.id} className="bl-table-row">
+                                      <span style={{ fontSize: '0.8rem', color: 'var(--t)', fontWeight: 500 }}>{tx.tipo}</span>
+                                      <span style={{ fontFamily: 'var(--fm)', fontSize: '0.78rem', fontWeight: 700, color: 'var(--c)' }}>
+                              ${fmt.format(Number(tx.valor || 0))}
+                            </span>
+                                      <span className="bl-estado-pill" style={{ color: est.color, borderColor: est.border, background: est.bg }}>
+                              {tx.estado}
+                            </span>
+                                      <span style={{ fontFamily: 'var(--fm)', fontSize: '0.6rem', color: 'var(--tf)' }}>
+                              {tx.fecha ? tx.fecha.replace('T', ' ').slice(0, 16) : '—'}
+                            </span>
+                                    </div>
+                                );
+                              })}
+                            </>
+                        ) : (
+                            <div className="bl-empty">Esta billetera aún no registra transacciones.</div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="border border-dashed border-borde rounded-md p-5 bg-fondo flex flex-col gap-2">
-                    <p className="text-sm text-textoSecundario">Esta billetera aun no registra transacciones.</p>
-                    <p className="text-xs text-textoSecundario">Puedes ejecutar una operacion desde la vista de transacciones.</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </>
-      )}
-    </section>
+          )}
+        </div>
+      </>
   );
 }
