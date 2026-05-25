@@ -7,13 +7,12 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       proxy: {
-        '/api/anthropic': {
-          target: 'https://api.anthropic.com',
+        '/api/groq': {
+          target: 'https://api.groq.com',
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api\/anthropic/, ''),
+          rewrite: (path) => path.replace(/^\/api\/groq/, ''),
           headers: {
-            'x-api-key': env.VITE_ANTHROPIC_KEY,
-            'anthropic-version': '2023-06-01',
+            'Authorization': `Bearer ${env.VITE_GROQ_KEY}`,
           },
         },
       },
