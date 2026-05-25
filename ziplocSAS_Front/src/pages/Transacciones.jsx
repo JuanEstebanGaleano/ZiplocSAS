@@ -10,6 +10,7 @@ import { useBilleteras } from '../hooks/useBilleteras';
 import { useTransacciones, useCrearTransaccion, useRevertirTransaccion } from '../hooks/useTransacciones';
 import { obtenerUsuarioPorId } from '../services/api';
 import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Clock, Zap, Activity, TrendingUp, Bell, Wallet, RotateCcw, Filter, Calendar } from 'lucide-react';
+import { useOperacionesProgramadas } from '../hooks/useOperacionesProgramadas';
 
 const INITIAL_FORM = { tipo: '', billeteraOrigenId: '', billeteraDestinoId: '', destinoExternoId: '', valor: '' };
 
@@ -33,6 +34,7 @@ function estadoMeta(e) { return ESTADO_META[String(e||'').toUpperCase()] || { la
 
 const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 const fmtDate = d => d ? new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
 
 function buildErrors(form, billeteras) {
   const errors = {};
@@ -92,6 +94,11 @@ export default function Transacciones({ userId }) {
   const [filterEnd, setFilterEnd] = useState('');
   const [revertingId, setRevertingId] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  const programadasQuery = useOperacionesProgramadas(userId);
+  const programadas = Array.isArray(programadasQuery.data)
+      ? programadasQuery.data
+      : programadasQuery.data?.operaciones ?? [];
 
   const billeterasQuery = useBilleteras(userId);
   const crearMutation = useCrearTransaccion();
@@ -612,11 +619,49 @@ export default function Transacciones({ userId }) {
                     <div className="tx-panel">
                       <div className="tx-panel-head">
                         <span className="tx-panel-title"><Clock size={14} color="var(--volt)" /> Operaciones programadas</span>
-                        <span className="tx-panel-badge">Tiempo real</span>
+                        <span className="tx-panel-badge">{programadas.length} pendientes</span>
                       </div>
-                      <div style={{ padding: '1.5rem 1.25rem', fontFamily: 'var(--mono)', fontSize: '0.63rem', color: 'var(--muted)', textAlign: 'center', borderTop: '1px dashed rgba(255,255,255,0.05)' }}>
-                        No hay operaciones programadas.
-                      </div>
+                      {programadasQuery.isLoading ? (
+                          <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
+                            <LoadingSpinner />
+                          </div>
+                      ) : programadas.length ? (
+                          <div style={{ padding: '0.75rem' }}>
+                            {programadas.map(op => {
+                              const tm = tipoMeta(op.tipo);
+                              const Icon = tm.icon;
+                              const pm = { 1:'CRÍTICA', 2:'ALTA', 3:'MEDIA', 4:'BAJA', 5:'MÍNIMA' };
+                              const pc = { 1:'#FF2D78', 2:'#FF6B2B', 3:'#FFE500', 4:'#00C8FF', 5:'#888' };
+                              const prio = op.prioridad ?? 3;
+                              return (
+                                  <div key={op.id} style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                    padding: '0.75rem', marginBottom: '0.5rem',
+                                    background: 'rgba(0,0,0,0.3)', borderRadius: 8,
+                                    border: `1px solid ${tm.border}`,
+                                  }}>
+                                    <Icon size={14} color={tm.color} />
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <span style={{ fontFamily: 'var(--mono)', fontSize: '0.6rem', color: tm.color, textTransform: 'uppercase' }}>{tm.label}</span>
+                                        <span style={{ fontFamily: 'var(--mono)', fontSize: '0.5rem', padding: '0.1rem 0.4rem', borderRadius: 3, background: `${pc[prio]}20`, color: pc[prio], border: `1px solid ${pc[prio]}40` }}>{pm[prio]}</span>
+                                      </div>
+                                      <div style={{ fontFamily: 'var(--head)', fontSize: '1rem', color: 'var(--text)', marginTop: 2 }}>{fmt.format(Number(op.valor || 0))}</div>
+                                      {op.fechaEjecucion && (
+                                          <div style={{ fontFamily: 'var(--mono)', fontSize: '0.55rem', color: 'var(--muted)', marginTop: 2 }}>
+                                            {new Date(op.fechaEjecucion).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })}
+                                          </div>
+                                      )}
+                                    </div>
+                                  </div>
+                              );
+                            })}
+                          </div>
+                      ) : (
+                          <div style={{ padding: '1.5rem 1.25rem', fontFamily: 'var(--mono)', fontSize: '0.63rem', color: 'var(--muted)', textAlign: 'center', borderTop: '1px dashed rgba(255,255,255,0.05)' }}>
+                            No hay operaciones programadas.
+                          </div>
+                      )}
                     </div>
 
                     {/* Notificaciones */}

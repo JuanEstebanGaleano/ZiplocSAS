@@ -172,3 +172,19 @@ export function transferirTransaccion(payload) {
 export function revertirUltimaTransaccion(payload) {
   return safeRequest('post', '/transacciones/revertir-ultima', payload);
 }
+// Agrega esto al final de services/api.js
+export function obtenerOperacionesProgramadas(usuarioId, config) {
+  return safeRequest('get', `/programadas?usuarioId=${usuarioId}`, undefined, config);
+}
+
+export function obtenerOperacionesProcesadas(usuarioId, config) {
+  return safeRequest('get', `/programadas/procesadas?usuarioId=${usuarioId}`, undefined, config);
+}
+
+export function crearOperacionProgramadaApi(data) {
+  return safeRequest('post', '/programadas', data);
+}
+
+export function procesarOperacionApi(hasta) {
+  return safeRequest('post', `/programadas/procesar?hasta=${encodeURIComponent(hasta)}`);
+}

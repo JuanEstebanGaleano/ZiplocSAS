@@ -1,20 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import apiClient from '../api/axios';
-
-async function crearOperacionProgramada(data) {
-  const response = await apiClient.post('/programadas', data);
-  return response;
-}
-
-async function procesarOperacion(hasta) {
-  const response = await apiClient.post(`/programadas/procesar?hasta=${encodeURIComponent(hasta)}`);
-  return response;
-}
+import {
+  obtenerOperacionesProgramadas,
+  obtenerOperacionesProcesadas,
+  crearOperacionProgramadaApi,
+  procesarOperacionApi,
+} from '../services/api';
 
 export function useOperacionesProgramadas(usuarioId) {
   return useQuery({
     queryKey: ['programadas', usuarioId],
-    queryFn: ({ signal }) => apiClient.get(`/programadas?usuarioId=${usuarioId}`, { signal }),
+    queryFn: ({ signal }) => obtenerOperacionesProgramadas(usuarioId, { signal }),
     enabled: !!usuarioId,
   });
 }
@@ -22,7 +17,7 @@ export function useOperacionesProgramadas(usuarioId) {
 export function useOperacionesProcesadas(usuarioId) {
   return useQuery({
     queryKey: ['programadas-procesadas', usuarioId],
-    queryFn: ({ signal }) => apiClient.get(`/programadas/procesadas?usuarioId=${usuarioId}`, { signal }),
+    queryFn: ({ signal }) => obtenerOperacionesProcesadas(usuarioId, { signal }),
     enabled: !!usuarioId,
   });
 }
@@ -30,8 +25,8 @@ export function useOperacionesProcesadas(usuarioId) {
 export function useCrearOperacionProgramada() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data) => crearOperacionProgramada(data),
-    onSuccess: (data, variables) => {
+    mutationFn: (data) => crearOperacionProgramadaApi(data),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['programadas'] });
     },
   });
@@ -40,10 +35,12 @@ export function useCrearOperacionProgramada() {
 export function useProcesarOperacion() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (hasta) => procesarOperacion(hasta),
+    mutationFn: (hasta) => procesarOperacionApi(hasta),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['programadas'] });
       queryClient.invalidateQueries({ queryKey: ['programadas-procesadas'] });
+      queryClient.invalidateQueries({ queryKey: ['transacciones'] });
+      queryClient.invalidateQueries({ queryKey: ['billeteras'] });
     },
   });
 }
