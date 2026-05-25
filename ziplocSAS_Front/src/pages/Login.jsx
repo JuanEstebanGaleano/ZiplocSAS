@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LoaderCircle, ShieldCheck, ArrowRight } from 'lucide-react';
 import AlertaPanel from '../components/AlertaPanel';
 import { useAuth } from '../auth/AuthContext';
+import AIChat from '../components/AIChat';
 
 export default function Login({ sessionExpired = false, initialError = '' }) {
   const { login, register, isLoading } = useAuth();
@@ -404,6 +405,7 @@ export default function Login({ sessionExpired = false, initialError = '' }) {
           background: rgba(34,211,165,0.1);
         }
       `}</style>
+        <AIChat />
 
         <div className="login-root">
           <div className="login-bg" />

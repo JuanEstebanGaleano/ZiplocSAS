@@ -54,6 +54,7 @@ public class UsuarioService {
         usuario.setPuntosAcumulados(Math.max(0, usuario.getPuntosAcumulados()));
         usuario.setNivel(calcularNivel(usuario.getPuntosAcumulados()));
         usuario.setWallets(new ArrayList<>());
+        usuario.setActivo(true);  // ← AGREGAR ESTA LÍNEA
 
         Usuario guardado = usuarioRepository.save(usuario);
         sincronizarUsuario(guardado);
@@ -118,6 +119,7 @@ public class UsuarioService {
         if (usuario.getFechaRegistro() == null) {
             usuario.setFechaRegistro(existente.getFechaRegistro());
         }
+        //usuario.setActivo(existente.isActivo());
         usuario.setPuntosAcumulados(Math.max(0, usuario.getPuntosAcumulados()));
         usuario.setNivel(calcularNivel(usuario.getPuntosAcumulados()));
         if (estaVacio(nuevaContrasena)) {
