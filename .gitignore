@@ -1,4 +1,7 @@
 VITE_ANTHROPIC_KEY=sk-ant-api03-...
+.env
+.env.local
+.env*.local
 node_modules/
 dist/
 target/
