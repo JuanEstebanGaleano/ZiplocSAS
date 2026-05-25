@@ -1,198 +1,276 @@
-import { LayoutDashboard, Wallet, ArrowRightLeft, LineChart, Gift, Bell, Clock, Users, Menu } from 'lucide-react';
+import { LayoutDashboard, Wallet, ArrowRightLeft, LineChart, Gift, Bell, Clock, Users, Menu, Radar } from 'lucide-react';
 
 export default function Sidebar({ activeView, onNavigate, collapsed, setCollapsed }) {
-  const coreItems = [
-    { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { key: 'usuarios', label: 'Usuarios', icon: Users },
-    { key: 'billeteras', label: 'Billeteras', icon: Wallet },
-  ];
+    const coreItems = [
+        { key: 'dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+        { key: 'usuarios',     label: 'Usuarios',     icon: Users },
+        { key: 'billeteras',   label: 'Billeteras',   icon: Wallet },
+    ];
 
-  const activityItems = [
-    { key: 'transacciones', label: 'Transacciones', icon: ArrowRightLeft },
-    { key: 'analitica', label: 'Analítica', icon: LineChart },
-    { key: 'recompensas', label: 'Recompensas', icon: Gift },
-    { key: 'notificaciones', label: 'Notificaciones', icon: Bell },
-    { key: 'programadas', label: 'Programadas', icon: Clock },
-  ];
+    const activityItems = [
+        { key: 'transacciones',  label: 'Transacciones',  icon: ArrowRightLeft },
+        { key: 'analitica',      label: 'Analítica',       icon: LineChart },
+        { key: 'recompensas',    label: 'Recompensas',     icon: Gift },
+        { key: 'notificaciones', label: 'Notificaciones',  icon: Bell },
+        { key: 'programadas',    label: 'Programadas',     icon: Clock },
+    ];
 
-  const renderItem = (item) => {
-    const isActive = activeView === item.key;
-    const Icon = item.icon;
-    return (
-        <button
-            key={item.key}
-            type="button"
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: collapsed ? 0 : '0.75rem',
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              padding: collapsed ? '0.75rem' : '0.7rem 1rem',
-              borderRadius: '10px',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              fontFamily: "'DM Sans', sans-serif",
-              fontWeight: isActive ? 600 : 400,
-              letterSpacing: '-0.01em',
-              transition: 'background 0.18s, color 0.18s, box-shadow 0.18s',
-              background: isActive
-                  ? 'linear-gradient(135deg, rgba(99,88,255,0.22) 0%, rgba(34,211,165,0.12) 100%)'
-                  : 'transparent',
-              color: isActive ? '#fff' : 'rgba(255,255,255,0.4)',
-              boxShadow: isActive ? 'inset 0 0 0 1px rgba(99,88,255,0.35)' : 'none',
-              outline: 'none',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}
-            onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
-            onClick={() => onNavigate(item.key)}
-            aria-pressed={isActive}
-        >
-          {/* Punto activo */}
-          {isActive && (
-              <span style={{
-                position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-                width: 3, height: '60%', borderRadius: '0 3px 3px 0',
-                background: 'linear-gradient(180deg, #6358ff, #22d3a5)',
-              }} />
-          )}
-          <Icon size={18} style={{ color: isActive ? '#a89eff' : 'inherit', flexShrink: 0 }} />
-          {!collapsed && <span>{item.label}</span>}
-        </button>
-    );
-  };
+    const monitorItems = [
+        { key: 'signalflow', label: 'Signal Flow', icon: Radar, accent: true },
+    ];
 
-  return (
-      <>
-        <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-      `}</style>
-        <aside style={{
-          minHeight: '100vh',
-          width: collapsed ? 72 : 260,
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 0,
-          background: 'rgba(10,10,15,0.95)',
-          borderRight: '1px solid rgba(255,255,255,0.06)',
-          backdropFilter: 'blur(20px)',
-          transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
-          overflow: 'hidden',
-          position: 'relative',
-          zIndex: 10,
-        }}>
+    const renderItem = (item) => {
+        const isActive = activeView === item.key;
+        const Icon = item.icon;
 
-          {/* Glow decorativo superior */}
-          <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, height: 180,
-            background: 'radial-gradient(ellipse 120% 80% at 50% -20%, rgba(99,88,255,0.18) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }} />
+        // Colores especiales para el ítem accent (Signal Flow)
+        const accentColor  = '#00C8FF';
+        const activeColor  = item.accent
+            ? accentColor
+            : 'rgba(255,255,255,0.9)';
+        const activeBg     = item.accent
+            ? 'rgba(0,200,255,0.1)'
+            : 'linear-gradient(135deg, rgba(99,88,255,0.22) 0%, rgba(34,211,165,0.12) 100%)';
+        const activeBorder = item.accent
+            ? '1px solid rgba(0,200,255,0.35)'
+            : 'inset 0 0 0 1px rgba(99,88,255,0.35)';
+        const iconColor    = item.accent
+            ? (isActive ? accentColor : 'rgba(0,200,255,0.55)')
+            : (isActive ? '#a89eff' : 'inherit');
 
-          {/* Header */}
-          <div style={{
-            padding: collapsed ? '1.5rem 0' : '1.5rem 1.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'space-between',
-            gap: '0.75rem',
-            borderBottom: '1px solid rgba(255,255,255,0.05)',
-            marginBottom: '0.5rem',
-            position: 'relative',
-          }}>
-            {!collapsed && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <img
-                      src="https://images.genius.com/2ac9006741241a4565391f4b145cc4dd.1000x1000x1.jpg"
-                      alt="ZiplocSAS"
-                      style={{ width: 30, height: 30, borderRadius: 7, objectFit: 'cover', boxShadow: '0 2px 10px rgba(99,88,255,0.35)' }}
-                  />
-                  <span style={{
-                    fontFamily: "'Syne', sans-serif",
-                    fontWeight: 800,
-                    fontSize: '0.9rem',
-                    color: '#fff',
-                    letterSpacing: '-0.03em',
-                    whiteSpace: 'nowrap',
-                  }}>ZiplocSAS</span>
-                </div>
-            )}
-            {collapsed && (
-                <img
-                    src="https://images.genius.com/2ac9006741241a4565391f4b145cc4dd.1000x1000x1.jpg"
-                    alt="ZiplocSAS"
-                    style={{ width: 30, height: 30, borderRadius: 7, objectFit: 'cover', boxShadow: '0 2px 10px rgba(99,88,255,0.35)', marginBottom: '0.25rem' }}
-                />
-            )}
+        return (
             <button
-                onClick={() => setCollapsed(!collapsed)}
+                key={item.key}
+                type="button"
                 style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'rgba(255,255,255,0.35)', padding: '0.25rem',
-                  borderRadius: 6, transition: 'color 0.18s',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0,
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: collapsed ? 0 : '0.75rem',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    padding: collapsed ? '0.75rem' : '0.7rem 1rem',
+                    borderRadius: '10px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontWeight: isActive ? 600 : 400,
+                    letterSpacing: '-0.01em',
+                    transition: 'background 0.18s, color 0.18s, box-shadow 0.18s',
+                    background: isActive ? activeBg : 'transparent',
+                    color: isActive
+                        ? activeColor
+                        : item.accent
+                            ? 'rgba(0,200,255,0.5)'
+                            : 'rgba(255,255,255,0.4)',
+                    boxShadow: isActive ? activeBorder : 'none',
+                    outline: 'none',
+                    position: 'relative',
+                    overflow: 'hidden',
                 }}
-                onMouseEnter={e => e.currentTarget.style.color = '#a89eff'}
-                onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}
+                onMouseEnter={e => {
+                    if (!isActive) {
+                        e.currentTarget.style.background = item.accent
+                            ? 'rgba(0,200,255,0.07)'
+                            : 'rgba(255,255,255,0.05)';
+                        e.currentTarget.style.color = item.accent
+                            ? 'rgba(0,200,255,0.85)'
+                            : 'rgba(255,255,255,0.75)';
+                    }
+                }}
+                onMouseLeave={e => {
+                    if (!isActive) {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = item.accent
+                            ? 'rgba(0,200,255,0.5)'
+                            : 'rgba(255,255,255,0.4)';
+                    }
+                }}
+                onClick={() => onNavigate(item.key)}
+                aria-pressed={isActive}
             >
-              <Menu size={18} />
+                {/* Barra lateral activa */}
+                {isActive && (
+                    <span style={{
+                        position: 'absolute', left: 0, top: '50%',
+                        transform: 'translateY(-50%)',
+                        width: 3, height: '60%', borderRadius: '0 3px 3px 0',
+                        background: item.accent
+                            ? 'linear-gradient(180deg, #00C8FF, #00F5FF)'
+                            : 'linear-gradient(180deg, #6358ff, #22d3a5)',
+                    }} />
+                )}
+
+                {/* Shimmer en Signal Flow */}
+                {item.accent && (
+                    <span style={{
+                        position: 'absolute', inset: 0,
+                        background: 'linear-gradient(105deg, transparent 40%, rgba(0,200,255,0.06) 50%, transparent 60%)',
+                        backgroundSize: '200% 100%',
+                        animation: 'sfShimmer 2.8s linear infinite',
+                        pointerEvents: 'none',
+                    }} />
+                )}
+
+                <Icon size={18} style={{ color: iconColor, flexShrink: 0 }} />
+                {!collapsed && (
+                    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
+                        <span>{item.label}</span>
+                        {item.accent && (
+                            <span style={{
+                                fontSize: '0.62rem', fontWeight: 400,
+                                color: 'rgba(0,200,255,0.4)', letterSpacing: '0.04em',
+                            }}>Mapa de flujo</span>
+                        )}
+                    </span>
+                )}
             </button>
-          </div>
+        );
+    };
 
-          {/* Nav principal */}
-          <div style={{ padding: '0.5rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-            {!collapsed && (
-                <span style={{
-                  fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em',
-                  color: 'rgba(255,255,255,0.2)', fontWeight: 600, padding: '0.4rem 0.5rem 0.2rem',
-                }}>Principal</span>
-            )}
-            {coreItems.map(renderItem)}
-          </div>
+    return (
+        <>
+            <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
 
-          {/* Divider */}
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '0.5rem 1.25rem' }} />
+        @keyframes sfShimmer {
+          0%   { background-position: -200% 0; }
+          100% { background-position:  200% 0; }
+        }
+        @keyframes sfPing {
+          0%,100% { box-shadow: 0 0 0 0 rgba(0,200,255,0.3); }
+          50%      { box-shadow: 0 0 0 5px rgba(0,200,255,0); }
+        }
+      `}</style>
 
-          {/* Nav actividad */}
-          <div style={{ padding: '0.5rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-            {!collapsed && (
-                <span style={{
-                  fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em',
-                  color: 'rgba(255,255,255,0.2)', fontWeight: 600, padding: '0.4rem 0.5rem 0.2rem',
-                }}>Actividad</span>
-            )}
-            {activityItems.map(renderItem)}
-          </div>
+            <aside style={{
+                minHeight: '100vh',
+                width: collapsed ? 72 : 260,
+                flexShrink: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                background: 'rgba(10,10,15,0.95)',
+                borderRight: '1px solid rgba(255,255,255,0.06)',
+                backdropFilter: 'blur(20px)',
+                transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
+                overflow: 'hidden',
+                position: 'relative',
+                zIndex: 10,
+            }}>
 
-          {/* Footer */}
-          <div style={{
-            marginTop: 'auto',
-            padding: collapsed ? '1.25rem 0' : '1.25rem',
-            borderTop: '1px solid rgba(255,255,255,0.05)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: collapsed ? 'center' : 'flex-start',
-            gap: '0.2rem',
-          }}>
-            {!collapsed && (
-                <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(255,255,255,0.22)' }}>
-              Sesión activa
-            </span>
-            )}
-            <div style={{
-              width: 28, height: 28, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #6358ff, #22d3a5)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '0.7rem', fontWeight: 700, color: '#fff',
-              flexShrink: 0,
-            }}>ID</div>
-          </div>
-        </aside>
-      </>
-  );
+                {/* Glow decorativo */}
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, height: 200,
+                    background: 'radial-gradient(ellipse 120% 80% at 50% -20%, rgba(99,88,255,0.18) 0%, transparent 70%)',
+                    pointerEvents: 'none',
+                }} />
+
+                {/* Logo / Header */}
+                <div style={{
+                    padding: collapsed ? '1.5rem 0' : '1.5rem 1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: collapsed ? 'center' : 'space-between',
+                    gap: '0.75rem',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    marginBottom: '0.5rem',
+                    position: 'relative',
+                }}>
+                    {!collapsed && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                            <img
+                                src="https://images.genius.com/2ac9006741241a4565391f4b145cc4dd.1000x1000x1.jpg"
+                                alt="ZiplocSAS"
+                                style={{ width: 30, height: 30, borderRadius: 7, objectFit: 'cover', boxShadow: '0 2px 10px rgba(99,88,255,0.35)' }}
+                            />
+                            <span style={{
+                                fontFamily: "'Syne', sans-serif",
+                                fontWeight: 800, fontSize: '0.9rem', color: '#fff',
+                                letterSpacing: '-0.03em', whiteSpace: 'nowrap',
+                            }}>ZiplocSAS</span>
+                        </div>
+                    )}
+                    {collapsed && (
+                        <img
+                            src="https://images.genius.com/2ac9006741241a4565391f4b145cc4dd.1000x1000x1.jpg"
+                            alt="ZiplocSAS"
+                            style={{ width: 30, height: 30, borderRadius: 7, objectFit: 'cover', boxShadow: '0 2px 10px rgba(99,88,255,0.35)' }}
+                        />
+                    )}
+                    <button
+                        onClick={() => setCollapsed(!collapsed)}
+                        style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: 'rgba(255,255,255,0.35)', padding: '0.25rem',
+                            borderRadius: 6, transition: 'color 0.18s',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#a89eff'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}
+                    >
+                        <Menu size={18} />
+                    </button>
+                </div>
+
+                {/* Principal */}
+                <div style={{ padding: '0.5rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    {!collapsed && (
+                        <span style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.2)', fontWeight: 600, padding: '0.4rem 0.5rem 0.2rem' }}>
+                            Principal
+                        </span>
+                    )}
+                    {coreItems.map(renderItem)}
+                </div>
+
+                {/* Divider */}
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '0.5rem 1.25rem' }} />
+
+                {/* Actividad */}
+                <div style={{ padding: '0.5rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    {!collapsed && (
+                        <span style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.2)', fontWeight: 600, padding: '0.4rem 0.5rem 0.2rem' }}>
+                            Actividad
+                        </span>
+                    )}
+                    {activityItems.map(renderItem)}
+                </div>
+
+                {/* Divider accent */}
+                <div style={{ height: 1, background: 'rgba(0,200,255,0.1)', margin: '0.5rem 1.25rem' }} />
+
+                {/* Monitor */}
+                <div style={{ padding: '0.5rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    {!collapsed && (
+                        <span style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(0,200,255,0.35)', fontWeight: 600, padding: '0.4rem 0.5rem 0.2rem' }}>
+                            Monitor
+                        </span>
+                    )}
+                    {monitorItems.map(renderItem)}
+                </div>
+
+                {/* Footer */}
+                <div style={{
+                    marginTop: 'auto',
+                    padding: collapsed ? '1.25rem 0' : '1.25rem',
+                    borderTop: '1px solid rgba(255,255,255,0.05)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: collapsed ? 'center' : 'flex-start',
+                    gap: '0.2rem',
+                }}>
+                    {!collapsed && (
+                        <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(255,255,255,0.22)' }}>
+                            Sesión activa
+                        </span>
+                    )}
+                    <div style={{
+                        width: 28, height: 28, borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #6358ff, #22d3a5)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.7rem', fontWeight: 700, color: '#fff', flexShrink: 0,
+                    }}>ID</div>
+                </div>
+            </aside>
+        </>
+    );
 }

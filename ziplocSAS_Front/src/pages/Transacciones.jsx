@@ -1,11 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import TransaccionForm from '../components/TransaccionForm';
-import TransaccionItem from '../components/TransaccionItem';
 import LoadingSpinner from '../components/LoadingSpinner';
-import AlertaPanel from '../components/AlertaPanel';
-import SelectCustom from '../components/SelectCustom';
-import UsuarioCard from '../components/UsuarioCard';
-import NotificacionesPanel from '../components/NotificacionesPanel';
 import { useBilleteras } from '../hooks/useBilleteras';
 import { useTransacciones, useCrearTransaccion, useRevertirTransaccion } from '../hooks/useTransacciones';
 import { obtenerUsuarioPorId } from '../services/api';
